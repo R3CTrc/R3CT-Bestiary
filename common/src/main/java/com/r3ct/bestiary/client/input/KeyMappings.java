@@ -1,6 +1,6 @@
 package com.r3ct.bestiary.client.input;
 
-import com.r3ct.bestiary.client.screen.CatalogScreen;
+import com.r3ct.bestiary.client.screen.BestiaryScreen;
 import net.minecraft.client.KeyMapping;
 import net.minecraft.client.Minecraft;
 
@@ -15,7 +15,7 @@ public class KeyMappings {
 
         while (openCatalogKey.consumeClick()) {
             if (mc.screen == null && mc.level != null) {
-                mc.setScreen(new CatalogScreen());
+                mc.setScreen(new BestiaryScreen());
             }
         }
     }

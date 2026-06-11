@@ -1,0 +1,43 @@
+{
+  "_comment_version": "Do not change the version number! It is used for automatic config updates.",
+  "version": 1,
+
+  "_comment_xp": "Experience points rewarded when fully researching a mob. Based on mob category.",
+  "xpBosses": 500,
+  "xpMonsters": 100,
+  "xpCreatures": 50,
+
+  "_comment_mastery_xp": "Huge experience point rewards given for reaching Mastery Stars 1, 2, and 3.",
+  "xpStar1": 500,
+  "xpStar2": 1500,
+  "xpStar3": 3000,
+
+  "_comment_interval": "How often (every X fully researched species) the player receives a milestone reward.",
+  "milestoneInterval": 10,
+
+  "_comment_milestones": "Loot pool for milestone rewards. 'chance' determines the probability of dropping.",
+  "milestoneRewards": [
+    {
+      "item": "minecraft:emerald",
+      "min_amount": 24,
+      "max_amount": 32,
+      "chance": 50,
+      "color": "&a"
+    },
+    {
+      "item": "minecraft:diamond",
+      "min_amount": 16,
+      "max_amount": 24,
+      "chance": 50,
+      "color": "&b"
+    }
+  ],
+
+  "_comment_categories": "Rewards given for completing an entire category. Default fallback for mods is 'modded_generic'.",
+  "categoryRewards": {
+    "minecraft:bosses": "minecraft:bedrock",
+    "minecraft:monsters": "minecraft:bedrock",
+    "minecraft:creatures": "minecraft:bedrock",
+    "modded_generic": "minecraft:bedrock"
+  }
+}

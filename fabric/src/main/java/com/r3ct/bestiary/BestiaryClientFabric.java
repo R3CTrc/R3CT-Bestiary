@@ -11,7 +11,7 @@ import org.lwjgl.glfw.GLFW;
 
 public class BestiaryClientFabric implements ClientModInitializer {
 
-    private static final KeyMapping.Category R3CT_COLLECTOR_CATEGORY = KeyMapping.Category.register(Identifier.parse("r3ct_bestiary:main"));
+    private static final KeyMapping.Category R3CT_BESTIARY_CATEGORY = KeyMapping.Category.register(Identifier.parse("r3ct_bestiary:main"));
 
     @Override
     public void onInitializeClient() {
@@ -20,7 +20,7 @@ public class BestiaryClientFabric implements ClientModInitializer {
                 "key.r3ct.open_catalog",
                 com.mojang.blaze3d.platform.InputConstants.Type.KEYSYM,
                 GLFW.GLFW_KEY_K,
-                R3CT_COLLECTOR_CATEGORY
+                R3CT_BESTIARY_CATEGORY
         ));
 
         ClientTickEvents.END_CLIENT_TICK.register(client -> {
@@ -31,7 +31,7 @@ public class BestiaryClientFabric implements ClientModInitializer {
                 com.r3ct.bestiary.network.SyncDataPayload.TYPE,
                 (payload, context) -> {
                     context.client().execute(() -> {
-                        ClientPlayerData.unlockedItems = new java.util.HashSet<>(payload.unlockedItems());
+                        ClientPlayerData.killCounts = new java.util.HashMap<>(payload.killCounts());
                         ClientPlayerData.rewardedCategories = new java.util.HashSet<>(payload.rewardedCategories());
                     });
                 }

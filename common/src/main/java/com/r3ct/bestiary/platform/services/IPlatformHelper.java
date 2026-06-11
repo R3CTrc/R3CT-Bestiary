@@ -42,11 +42,7 @@ public interface IPlatformHelper {
         return isDevelopmentEnvironment() ? "development" : "production";
     }
 
-    void sendSubmitItemPacketToServer(String itemId, int slotId);
-
-    void sendClaimRewardPacketToServer(String tabId);
-
-    void sendSyncDataPacketToClient(net.minecraft.server.level.ServerPlayer player, java.util.Set<String> unlockedItems, java.util.Set<String> rewardedCategories);
+    void sendSyncDataPacketToClient(net.minecraft.server.level.ServerPlayer player, java.util.Map<String, Integer> killCounts, java.util.Set<String> rewardedCategories);
 
     void sendRequestLeaderboardPacketToServer();
 

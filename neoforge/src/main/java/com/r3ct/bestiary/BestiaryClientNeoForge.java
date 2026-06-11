@@ -2,7 +2,7 @@ package com.r3ct.bestiary;
 
 import com.mojang.blaze3d.platform.InputConstants;
 import com.r3ct.bestiary.client.input.KeyMappings;
-import com.r3ct.bestiary.client.screen.CollectionConfigScreen;
+import com.r3ct.bestiary.client.screen.BestiaryConfigScreen;
 import net.minecraft.client.KeyMapping;
 import net.minecraft.resources.Identifier;
 import net.neoforged.api.distmarker.Dist;
@@ -17,7 +17,7 @@ public class BestiaryClientNeoForge {
     @EventBusSubscriber(modid = "r3ct_bestiary", value = Dist.CLIENT)
     public static class ClientModEvents {
 
-        public static final KeyMapping.Category R3CT_COLLECTOR_CATEGORY = KeyMapping.Category.register(Identifier.parse("r3ct_bestiary:main"));
+        public static final KeyMapping.Category R3CT_BESTIARY_CATEGORY = KeyMapping.Category.register(Identifier.parse("r3ct_bestiary:main"));
 
         @SubscribeEvent
         public static void onKeyRegister(RegisterKeyMappingsEvent event) {
@@ -25,7 +25,7 @@ public class BestiaryClientNeoForge {
                     "key.r3ct.open_catalog",
                     InputConstants.Type.KEYSYM,
                     GLFW.GLFW_KEY_K,
-                    R3CT_COLLECTOR_CATEGORY
+                    R3CT_BESTIARY_CATEGORY
             );
 
             event.register(KeyMappings.openCatalogKey);
@@ -35,7 +35,7 @@ public class BestiaryClientNeoForge {
         public static void onClientSetup(net.neoforged.fml.event.lifecycle.FMLClientSetupEvent event) {
             net.neoforged.fml.ModLoadingContext.get().registerExtensionPoint(
                     net.neoforged.neoforge.client.gui.IConfigScreenFactory.class,
-                    () -> (minecraft, parentScreen) -> new CollectionConfigScreen(parentScreen)
+                    () -> (minecraft, parentScreen) -> new BestiaryConfigScreen(parentScreen)
             );
         }
     }

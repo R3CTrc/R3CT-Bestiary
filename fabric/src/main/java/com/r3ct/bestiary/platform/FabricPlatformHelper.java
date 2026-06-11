@@ -1,6 +1,5 @@
 package com.r3ct.bestiary.platform;
 
-import com.r3ct.bestiary.network.SubmitItemPayload;
 import com.r3ct.bestiary.network.SyncDataPayload;
 import com.r3ct.bestiary.platform.services.IPlatformHelper;
 import net.fabricmc.loader.api.FabricLoader;
@@ -23,18 +22,11 @@ public class FabricPlatformHelper implements IPlatformHelper {
     }
 
     @Override
-    public void sendSubmitItemPacketToServer(String itemId, int slotId) {
-        net.fabricmc.fabric.api.client.networking.v1.ClientPlayNetworking.send(new SubmitItemPayload(itemId, slotId));
-    }
-
-    @Override
-    public void sendClaimRewardPacketToServer(String tabId) {
-        net.fabricmc.fabric.api.client.networking.v1.ClientPlayNetworking.send(new com.r3ct.bestiary.network.ClaimCategoryRewardPayload(tabId));
-    }
-
-    @Override
-    public void sendSyncDataPacketToClient(net.minecraft.server.level.ServerPlayer player, java.util.Set<String> unlockedItems, java.util.Set<String> rewardedCategories) {
-        net.fabricmc.fabric.api.networking.v1.ServerPlayNetworking.send(player, new SyncDataPayload(new java.util.ArrayList<>(unlockedItems), new java.util.ArrayList<>(rewardedCategories)));
+    public void sendSyncDataPacketToClient(net.minecraft.server.level.ServerPlayer player, java.util.Map<String, Integer> killCounts, java.util.Set<String> rewardedCategories) {
+        net.fabricmc.fabric.api.networking.v1.ServerPlayNetworking.send(
+                player,
+                new com.r3ct.bestiary.network.SyncDataPayload(killCounts, new java.util.ArrayList<>(rewardedCategories))
+        );
     }
 
     @Override

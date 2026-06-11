@@ -1,10 +1,9 @@
 package com.r3ct.bestiary;
 
 import com.r3ct.bestiary.client.data.ClientPlayerData;
-import com.r3ct.bestiary.config.CollectionConfig;
-import com.r3ct.bestiary.logic.ServerItemHandler;
-import com.r3ct.bestiary.network.SubmitItemPayload;
+import com.r3ct.bestiary.config.BestiaryConfig;
 import com.r3ct.bestiary.network.SyncDataPayload;
+import com.r3ct.bestiary.logic.MobKillHandler;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.resources.ResourceKey;
 import net.minecraft.server.level.ServerPlayer;
@@ -23,13 +22,14 @@ import net.minecraft.world.level.block.Block;
 import net.neoforged.neoforge.registries.RegisterEvent;
 import com.r3ct.bestiary.block.ModBlocks;
 
+import java.util.HashMap;
 import java.util.HashSet;
 
 @Mod(Constants.MOD_ID)
 public class BestiaryNeoForge {
 
     public BestiaryNeoForge(IEventBus modEventBus) {
-        CollectionConfig.load();
+        BestiaryConfig.load();
 
         modEventBus.addListener(this::registerPackets);
         modEventBus.addListener(this::onRegister);
@@ -39,31 +39,17 @@ public class BestiaryNeoForge {
     private void registerPackets(final RegisterPayloadHandlersEvent event) {
         final PayloadRegistrar registrar = event.registrar(Constants.MOD_ID);
 
-        registrar.playToServer(
-                SubmitItemPayload.TYPE, SubmitItemPayload.CODEC,
-                (payload, context) -> context.enqueueWork(() -> {
-                    ServerItemHandler.handleItemSubmit((ServerPlayer) context.player(), payload.itemId(), payload.slotId());
-                })
-        );
-
-        registrar.playToServer(
-                com.r3ct.bestiary.network.ClaimCategoryRewardPayload.TYPE, com.r3ct.bestiary.network.ClaimCategoryRewardPayload.CODEC,
-                (payload, context) -> context.enqueueWork(() -> {
-                    ServerItemHandler.handleCategoryReward((ServerPlayer) context.player(), payload.tabId());
-                })
-        );
-
         registrar.playToClient(
                 SyncDataPayload.TYPE, SyncDataPayload.CODEC,
                 (payload, context) -> context.enqueueWork(() -> {
-                    ClientPlayerData.unlockedItems = new HashSet<>(payload.unlockedItems());
+                    ClientPlayerData.killCounts = new HashMap<>(payload.killCounts());
                     ClientPlayerData.rewardedCategories = new HashSet<>(payload.rewardedCategories());
                 })
         );
 
         registrar.playToServer(
                 com.r3ct.bestiary.network.RequestLeaderboardPayload.TYPE, com.r3ct.bestiary.network.RequestLeaderboardPayload.CODEC,
-                (payload, context) -> context.enqueueWork(() -> ServerItemHandler.handleLeaderboardRequest((net.minecraft.server.level.ServerPlayer) context.player()))
+                (payload, context) -> context.enqueueWork(() -> MobKillHandler.handleLeaderboardRequest((net.minecraft.server.level.ServerPlayer) context.player()))
         );
 
         registrar.playToClient(
@@ -77,8 +63,7 @@ public class BestiaryNeoForge {
     private void onPlayerJoin(PlayerEvent.PlayerLoggedInEvent event) {
         if (event.getEntity() instanceof ServerPlayer serverPlayer) {
             com.r3ct.bestiary.data.PlayerData data = com.r3ct.bestiary.data.ModState.getPlayerData(serverPlayer.level().getServer(), serverPlayer.getUUID());
-            com.r3ct.bestiary.logic.ServerItemHandler.refundMigrationTrophies(serverPlayer, data);
-            com.r3ct.bestiary.platform.Services.PLATFORM.sendSyncDataPacketToClient(serverPlayer, data.unlockedItems, data.rewardedCategories);
+            com.r3ct.bestiary.platform.Services.PLATFORM.sendSyncDataPacketToClient(serverPlayer, data.killCounts, data.rewardedCategories);
         }
     }
 

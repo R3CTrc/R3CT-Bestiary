@@ -10,12 +10,12 @@ import java.util.List;
 public record LeaderboardDataPayload(List<TopPlayerEntry> entries) implements CustomPacketPayload {
     public static final Type<LeaderboardDataPayload> TYPE = new Type<>(Identifier.parse("r3ct_bestiary:sync_leaderboard"));
 
-    public record TopPlayerEntry(String name, int totalItems, List<String> unlockedItems) {}
+    public record TopPlayerEntry(String name, int totalCompleted, List<String> unlockedMobs) {}
 
     public static final StreamCodec<RegistryFriendlyByteBuf, TopPlayerEntry> ENTRY_CODEC = StreamCodec.composite(
             ByteBufCodecs.STRING_UTF8, TopPlayerEntry::name,
-            ByteBufCodecs.VAR_INT, TopPlayerEntry::totalItems,
-            ByteBufCodecs.STRING_UTF8.apply(ByteBufCodecs.list()), TopPlayerEntry::unlockedItems,
+            ByteBufCodecs.VAR_INT, TopPlayerEntry::totalCompleted,
+            ByteBufCodecs.STRING_UTF8.apply(ByteBufCodecs.list()), TopPlayerEntry::unlockedMobs,
             TopPlayerEntry::new
     );
 

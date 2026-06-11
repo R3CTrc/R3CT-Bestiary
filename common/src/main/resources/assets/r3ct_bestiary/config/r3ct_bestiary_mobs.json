@@ -1,0 +1,35 @@
+{
+  "_comment_version": "Do not change the version number! It is used for automatic config updates.",
+  "version": 1,
+
+  "_comment_blacklists": "Add mod IDs, category names (e.g. ambient, misc), or mob IDs here to hide them from the Bestiary.",
+  "blacklistedMods": [
+    "r3ct_bestiary"
+  ],
+  "blacklistedCategories": [
+    "misc"
+  ],
+  "blacklistedMobs": [
+    "minecraft:illusioner",
+    "minecraft:giant"
+  ],
+
+  "_comment_boss_mods": "All mobs from the mods listed here will automatically be treated as bosses.",
+  "bossMods": [],
+
+  "_comment_bosses": "Mobs listed here will be placed in their own 'Bosses' tab and use the default boss kill requirement.",
+  "customBosses": [
+    "minecraft:ender_dragon",
+    "minecraft:wither",
+    "minecraft:warden",
+    "minecraft:elder_guardian"
+  ],
+
+  "_comment_defaults": "Kill requirements array: [Base (Checkmark), Star 1, Star 2, Star 3].",
+  "defaultKillsBosses": [1, 3, 5, 10],
+  "defaultKillsMonsters": [1, 25, 50, 100],
+  "defaultKillsCreatures": [1, 25, 50, 100],
+
+  "_comment_custom_kills": "Overrides the default kill requirements array for specific mobs.",
+  "customKillRequirements": {}
+}

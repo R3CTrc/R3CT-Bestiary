@@ -9,11 +9,11 @@ import net.minecraft.network.chat.CommonComponents;
 import net.minecraft.network.chat.Component;
 import org.jspecify.annotations.NonNull;
 
-public class CollectionConfigScreen extends Screen {
+public class BestiaryConfigScreen extends Screen {
     private final Screen parent;
 
-    public CollectionConfigScreen(Screen parent) {
-        super(Component.translatable("gui.r3ct_collection.config.main.title"));
+    public BestiaryConfigScreen(Screen parent) {
+        super(Component.translatable("gui.r3ct_bestiary.config.main.title"));
         this.parent = parent;
     }
 
@@ -24,23 +24,23 @@ public class CollectionConfigScreen extends Screen {
         int centerX = this.width / 2 - buttonWidth / 2;
         int startY = this.height / 2 - 30;
 
-        this.addRenderableWidget(Button.builder(Component.translatable("gui.r3ct_collection.config.main.client_button"), button -> {
+        this.addRenderableWidget(Button.builder(Component.translatable("gui.r3ct_bestiary.config.main.client_button"), button -> {
                     this.minecraft.setScreen(new ClientConfigScreen(this));
                 })
                 .bounds(centerX, startY, buttonWidth, buttonHeight)
-                .tooltip(Tooltip.create(Component.translatable("gui.r3ct_collection.config.main.client_tooltip")))
+                .tooltip(Tooltip.create(Component.translatable("gui.r3ct_bestiary.config.main.client_tooltip")))
                 .build());
 
         boolean isSingleplayer = this.minecraft != null && this.minecraft.hasSingleplayerServer();
 
-        Button serverButton = Button.builder(Component.translatable("gui.r3ct_collection.config.main.server_button"), button -> {
+        Button serverButton = Button.builder(Component.translatable("gui.r3ct_bestiary.config.main.server_button"), button -> {
                     this.minecraft.setScreen(new ServerConfigScreen(this));
                 })
                 .bounds(centerX, startY + 25, buttonWidth, buttonHeight)
                 .tooltip(Tooltip.create(
                         isSingleplayer
-                                ? Component.translatable("gui.r3ct_collection.config.main.server_tooltip")
-                                : Component.translatable("gui.r3ct_collection.config.main.server_tooltip_disabled").withStyle(ChatFormatting.RED)
+                                ? Component.translatable("gui.r3ct_bestiary.config.main.server_tooltip")
+                                : Component.translatable("gui.r3ct_bestiary.config.main.server_tooltip_disabled").withStyle(ChatFormatting.RED)
                 ))
                 .build();
 

@@ -6,12 +6,14 @@ import net.minecraft.nbt.ListTag;
 import net.minecraft.nbt.StringTag;
 import net.minecraft.nbt.Tag;
 
+import java.util.HashMap;
 import java.util.HashSet;
+import java.util.Map;
 import java.util.Set;
 
 public class PlayerData {
     public String lastKnownName = "Unknown";
-    public Set<String> unlockedItems = new HashSet<>();
+    public Map<String, Integer> killCounts = new HashMap<>();
     public Set<String> rewardedCategories = new HashSet<>();
 
     public boolean receivedMigrationRefund = false;
@@ -19,7 +21,7 @@ public class PlayerData {
     public static final Codec<PlayerData> CODEC = CompoundTag.CODEC.xmap(PlayerData::fromNbt, PlayerData::toNbt);
 
     public PlayerData() {
-        unlockedItems.clear();
+        killCounts.clear();
         rewardedCategories.clear();
     }
 
@@ -27,12 +29,11 @@ public class PlayerData {
         CompoundTag nbt = new CompoundTag();
 
         nbt.putString("lastKnownName", lastKnownName);
-
         nbt.putBoolean("receivedMigrationRefund", receivedMigrationRefund);
 
-        ListTag itemsList = new ListTag();
-        for (String item : unlockedItems) itemsList.add(StringTag.valueOf(item != null ? item : ""));
-        nbt.put("unlockedItems", itemsList);
+        CompoundTag killsNbt = new CompoundTag();
+        killCounts.forEach(killsNbt::putInt);
+        nbt.put("killCounts", killsNbt);
 
         ListTag categoriesList = new ListTag();
         for (String cat : rewardedCategories) categoriesList.add(StringTag.valueOf(cat != null ? cat : ""));
@@ -52,12 +53,13 @@ public class PlayerData {
             data.receivedMigrationRefund = nbt.getBoolean("receivedMigrationRefund").orElse(false);
         }
 
-        if (nbt.contains("unlockedItems")) {
-            Tag tag = nbt.get("unlockedItems");
-            if (tag instanceof ListTag list) {
-                for (int i = 0; i < list.size(); i++) list.getString(i).ifPresent(data.unlockedItems::add);
+        if (nbt.contains("killCounts")) {
+            CompoundTag killsNbt = nbt.getCompound("killCounts").orElse(new CompoundTag());
+            for (String key : killsNbt.keySet()) {
+                killsNbt.getInt(key).ifPresent(count -> data.killCounts.put(key, count));
             }
         }
+
         if (nbt.contains("rewardedCategories")) {
             Tag tag = nbt.get("rewardedCategories");
             if (tag instanceof ListTag list) {

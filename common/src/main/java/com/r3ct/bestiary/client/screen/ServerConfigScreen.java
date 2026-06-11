@@ -1,6 +1,6 @@
 package com.r3ct.bestiary.client.screen;
 
-import com.r3ct.bestiary.config.CollectionConfig;
+import com.r3ct.bestiary.config.BestiaryConfig;
 import net.minecraft.util.Util;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.gui.components.Button;
@@ -17,7 +17,7 @@ public class ServerConfigScreen extends Screen {
     private final Screen parent;
 
     public ServerConfigScreen(Screen parent) {
-        super(Component.translatable("gui.r3ct_collection.config.server.title"));
+        super(Component.translatable("gui.r3ct_bestiary.config.server.title"));
         this.parent = parent;
     }
 
@@ -28,22 +28,22 @@ public class ServerConfigScreen extends Screen {
         int centerX = this.width / 2 - buttonWidth / 2;
         int startY = this.height / 2 - 30;
 
-        this.addRenderableWidget(Button.builder(Component.translatable("gui.r3ct_collection.config.server.items_button"), button -> {
-                    File configFile = Paths.get("config", "r3ct_bestiary", "r3ct_collection_items.json").toFile();
-                    if (!configFile.exists()) CollectionConfig.saveItems();
+        this.addRenderableWidget(Button.builder(Component.translatable("gui.r3ct_bestiary.config.server.mobs_button"), button -> {
+                    File configFile = Paths.get("config", "r3ct_bestiary", "r3ct_bestiary_mobs.json").toFile();
+                    if (!configFile.exists()) BestiaryConfig.saveMobs();
                     Util.getPlatform().openUri(configFile.toURI());
                 })
                 .bounds(centerX, startY, buttonWidth, buttonHeight)
-                .tooltip(Tooltip.create(Component.translatable("gui.r3ct_collection.config.server.items_tooltip")))
+                .tooltip(Tooltip.create(Component.translatable("gui.r3ct_bestiary.config.server.mobs_tooltip")))
                 .build());
 
-        this.addRenderableWidget(Button.builder(Component.translatable("gui.r3ct_collection.config.server.rewards_button"), button -> {
-                    File configFile = Paths.get("config", "r3ct_bestiary", "r3ct_collection_rewards.json").toFile();
-                    if (!configFile.exists()) CollectionConfig.save();
+        this.addRenderableWidget(Button.builder(Component.translatable("gui.r3ct_bestiary.config.server.rewards_button"), button -> {
+                    File configFile = Paths.get("config", "r3ct_bestiary", "r3ct_bestiary_rewards.json").toFile();
+                    if (!configFile.exists()) BestiaryConfig.saveRewards();
                     Util.getPlatform().openUri(configFile.toURI());
                 })
                 .bounds(centerX, startY + 25, buttonWidth, buttonHeight)
-                .tooltip(Tooltip.create(Component.translatable("gui.r3ct_collection.config.server.rewards_tooltip")))
+                .tooltip(Tooltip.create(Component.translatable("gui.r3ct_bestiary.config.server.rewards_tooltip")))
                 .build());
 
         this.addRenderableWidget(Button.builder(CommonComponents.GUI_DONE, button -> this.onClose())

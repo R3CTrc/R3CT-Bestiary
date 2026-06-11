@@ -1,6 +1,6 @@
 package com.r3ct.bestiary.client.screen;
 
-import com.r3ct.bestiary.config.CollectionConfig;
+import com.r3ct.bestiary.config.BestiaryConfig;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.gui.components.Button;
 import net.minecraft.client.gui.components.EditBox;
@@ -14,7 +14,7 @@ public class ClientConfigScreen extends Screen {
     private EditBox scaleBox;
 
     public ClientConfigScreen(Screen parent) {
-        super(Component.translatable("gui.r3ct_collection.config.client.title"));
+        super(Component.translatable("gui.r3ct_bestiary.config.client.title"));
         this.parent = parent;
     }
 
@@ -24,8 +24,8 @@ public class ClientConfigScreen extends Screen {
         int widgetWidth = 140;
         int widgetHeight = 20;
 
-        this.scaleBox = new EditBox(this.font, rightColumnX, 80, widgetWidth, widgetHeight, Component.translatable("gui.r3ct_collection.config.client.scale"));;
-        this.scaleBox.setValue(String.valueOf(CollectionConfig.catalogScale));
+        this.scaleBox = new EditBox(this.font, rightColumnX, 80, widgetWidth, widgetHeight, Component.translatable("gui.r3ct_bestiary.config.client.scale"));
+        this.scaleBox.setValue(String.valueOf(BestiaryConfig.catalogScale));
         this.addRenderableWidget(this.scaleBox);
 
         this.addRenderableWidget(Button.builder(CommonComponents.GUI_DONE, button -> this.onClose())
@@ -40,16 +40,16 @@ public class ClientConfigScreen extends Screen {
         guiGraphics.centeredText(this.font, this.title, this.width / 2, 20, 0xFFFFFFFF);
 
         int leftColumnX = this.width / 2 - 160;
-        guiGraphics.text(this.font, Component.translatable("gui.r3ct_collection.config.client.scale_desc"), leftColumnX, 80 + 6, 0xFFFFFFFF);
+        guiGraphics.text(this.font, Component.translatable("gui.r3ct_bestiary.config.client.scale_desc"), leftColumnX, 80 + 6, 0xFFFFFFFF);
     }
 
     @Override
     public void onClose() {
         try {
-            CollectionConfig.catalogScale = Float.parseFloat(this.scaleBox.getValue());
+            BestiaryConfig.catalogScale = Float.parseFloat(this.scaleBox.getValue());
         } catch (NumberFormatException ignored) {}
 
-        CollectionConfig.saveClient();
+        BestiaryConfig.saveClient();
 
         if (this.minecraft != null) {
             this.minecraft.setScreen(this.parent);

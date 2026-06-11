@@ -1,9 +1,8 @@
 package com.r3ct.bestiary;
 
-import com.r3ct.bestiary.config.CollectionConfig;
-import com.r3ct.bestiary.logic.ServerItemHandler;
-import com.r3ct.bestiary.network.SubmitItemPayload;
+import com.r3ct.bestiary.config.BestiaryConfig;
 import com.r3ct.bestiary.network.SyncDataPayload;
+import com.r3ct.bestiary.logic.MobKillHandler;
 import net.fabricmc.api.ModInitializer;
 import net.fabricmc.fabric.api.networking.v1.PayloadTypeRegistry;
 import net.fabricmc.fabric.api.networking.v1.ServerPlayNetworking;
@@ -25,7 +24,7 @@ public class BestiaryFabric implements ModInitializer {
 
     @Override
     public void onInitialize() {
-        CollectionConfig.load();
+        BestiaryConfig.load();
 
         registerTrophy("trophy_building", ModBlocks.TROPHY_BUILDING);
         registerTrophy("trophy_combat", ModBlocks.TROPHY_COMBAT);
@@ -65,28 +64,17 @@ public class BestiaryFabric implements ModInitializer {
                 .build()
         );
 
-        PayloadTypeRegistry.serverboundPlay().register(SubmitItemPayload.TYPE, SubmitItemPayload.CODEC);
-        PayloadTypeRegistry.serverboundPlay().register(com.r3ct.bestiary.network.ClaimCategoryRewardPayload.TYPE, com.r3ct.bestiary.network.ClaimCategoryRewardPayload.CODEC);
         PayloadTypeRegistry.clientboundPlay().register(SyncDataPayload.TYPE, SyncDataPayload.CODEC);
         PayloadTypeRegistry.serverboundPlay().register(com.r3ct.bestiary.network.RequestLeaderboardPayload.TYPE, com.r3ct.bestiary.network.RequestLeaderboardPayload.CODEC);
         PayloadTypeRegistry.clientboundPlay().register(com.r3ct.bestiary.network.LeaderboardDataPayload.TYPE, com.r3ct.bestiary.network.LeaderboardDataPayload.CODEC);
 
-        ServerPlayNetworking.registerGlobalReceiver(SubmitItemPayload.TYPE, (payload, context) -> {
-            context.server().execute(() -> ServerItemHandler.handleItemSubmit(context.player(), payload.itemId(), payload.slotId()));
-        });
-
-        ServerPlayNetworking.registerGlobalReceiver(com.r3ct.bestiary.network.ClaimCategoryRewardPayload.TYPE, (payload, context) -> {
-            context.server().execute(() -> ServerItemHandler.handleCategoryReward(context.player(), payload.tabId()));
-        });
-
         ServerPlayConnectionEvents.JOIN.register((handler, sender, server) -> {
             com.r3ct.bestiary.data.PlayerData data = com.r3ct.bestiary.data.ModState.getPlayerData(server, handler.player.getUUID());
-            com.r3ct.bestiary.logic.ServerItemHandler.refundMigrationTrophies(handler.player, data);
-            com.r3ct.bestiary.platform.Services.PLATFORM.sendSyncDataPacketToClient(handler.player, data.unlockedItems, data.rewardedCategories);
+            com.r3ct.bestiary.platform.Services.PLATFORM.sendSyncDataPacketToClient(handler.player, data.killCounts, data.rewardedCategories);
         });
 
         ServerPlayNetworking.registerGlobalReceiver(com.r3ct.bestiary.network.RequestLeaderboardPayload.TYPE, (payload, context) -> {
-            context.server().execute(() -> ServerItemHandler.handleLeaderboardRequest(context.player()));
+            context.server().execute(() -> MobKillHandler.handleLeaderboardRequest(context.player()));
         });
     }
 
