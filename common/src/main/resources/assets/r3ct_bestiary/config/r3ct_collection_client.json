@@ -1,0 +1,7 @@
+{
+  "_comment_version": "Do not change the version number! It is used for automatic config updates.",
+  "version": 1,
+
+  "_comment_scale": "Adjusts the size of the Collector's Book GUI. Lower values make it smaller.",
+  "catalogScale": 1.0
+}

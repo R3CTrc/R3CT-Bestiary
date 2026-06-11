@@ -1,0 +1,42 @@
+{
+    "schemaVersion": 1,
+    "id": "${mod_id}",
+    "version": "${version}",
+    "name": "${mod_name}",
+    "description": "${description}",
+    "authors": [
+        "${mod_author}"
+    ],
+    "contact": {
+        "homepage": "https://fabricmc.net/",
+        "sources": "https://github.com/FabricMC/fabric-example-mod"
+    },
+    "license": "${license}",
+    "icon": "assets/r3ct_bestiary/icon.png",
+    "environment": "*",
+    "entrypoints": {
+        "main": [
+            "com.r3ct.bestiary.BestiaryFabric"
+        ],
+        "client": [
+            "com.r3ct.bestiary.BestiaryClientFabric"
+        ],
+        "modmenu": [
+            "com.r3ct.bestiary.compat.ModMenuIntegration"
+        ]
+    },
+    "mixins": [
+      "r3ct_bestiary.mixins.json",
+        "r3ct_bestiary.fabric.mixins.json"
+    ],
+    "depends": {
+        "fabricloader": ">=${fabric_loader_version}",
+        "fabric-api": "*",
+        "minecraft": "~${minecraft_version}",
+        "java": ">=${java_version}"
+    },
+    "suggests": {
+        "another-mod": "*"
+    }
+}
+  

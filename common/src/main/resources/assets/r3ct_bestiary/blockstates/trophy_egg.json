@@ -1,0 +1,8 @@
+{
+  "variants": {
+    "facing=north": { "model": "r3ct_collection:block/trophy_egg" },
+    "facing=east":  { "model": "r3ct_collection:block/trophy_egg", "y": 90 },
+    "facing=south": { "model": "r3ct_collection:block/trophy_egg", "y": 180 },
+    "facing=west":  { "model": "r3ct_collection:block/trophy_egg", "y": 270 }
+  }
+}

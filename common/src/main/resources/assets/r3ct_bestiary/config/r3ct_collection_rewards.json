@@ -1,0 +1,46 @@
+{
+  "_comment_version": "Do not change the version number! It is used for automatic config updates.",
+  "version": 1,
+
+  "_comment_xp": "Experience points rewarded based on item rarity (Common, Uncommon, Rare, Epic).",
+  "xpCommon": 10,
+  "xpUncommon": 50,
+  "xpRare": 100,
+  "xpEpic": 500,
+
+  "_comment_interval": "How often (every X items) the player receives a milestone reward.",
+  "milestoneInterval": 100,
+
+  "_comment_milestones": "Loot pool for milestone rewards. 'weight' determines the chance of dropping (higher = more common).",
+  "milestoneRewards": [
+    {
+      "item": "minecraft:emerald",
+      "min_amount": 24,
+      "max_amount": 32,
+      "weight": 100,
+      "color": "&a"
+    },
+    {
+      "item": "minecraft:diamond",
+      "min_amount": 16,
+      "max_amount": 24,
+      "weight": 100,
+      "color": "&b"
+    }
+  ],
+
+  "_comment_categories": "Rewards given for completing an entire tab (100%). Default fallback is 'modded_generic'.",
+  "categoryRewards": {
+    "minecraft:building_blocks": "r3ct_collection:trophy_building",
+    "minecraft:colored_blocks": "r3ct_collection:trophy_colored",
+    "minecraft:natural_blocks": "r3ct_collection:trophy_natural",
+    "minecraft:functional_blocks": "r3ct_collection:trophy_functional",
+    "minecraft:redstone_blocks": "r3ct_collection:trophy_redstone",
+    "minecraft:tools_and_utilities": "r3ct_collection:trophy_tools",
+    "minecraft:combat": "r3ct_collection:trophy_combat",
+    "minecraft:food_and_drinks": "r3ct_collection:trophy_food",
+    "minecraft:ingredients": "r3ct_collection:trophy_ingredients",
+    "minecraft:spawn_eggs": "r3ct_collection:trophy_egg",
+    "modded_generic": "r3ct_collection:trophy_mod"
+  }
+}
