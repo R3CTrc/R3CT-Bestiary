@@ -34,6 +34,8 @@ public class BestiaryScreen extends Screen {
     private int selectedTabIndex = 0;
     private int currentRowScroll = 0;
     private int homeScroll = 0;
+    private int detailsScroll = 0;
+    private int maxDetailsScroll = 0;
 
     private float[] tabProgressArray = new float[0];
     private long lastUpdateTime = 0L;
@@ -41,8 +43,13 @@ public class BestiaryScreen extends Screen {
 
     private final List<EntityTypeScanner.CategoryData> cachedCategories = new ArrayList<>();
 
-    private enum SpecialTab { NONE, HOME, INFO, LEADERBOARD }
+    // Cache dla niewidzialnych "Manekinów" sczytujących atrybuty mobów
+    private final java.util.Map<String, net.minecraft.world.entity.LivingEntity> dummyCache = new java.util.HashMap<>();
+
+    // Dodano nową zakładkę DETAILS oraz zmienną śledzącą wybranego moba
+    private enum SpecialTab { NONE, HOME, INFO, LEADERBOARD, DETAILS }
     private SpecialTab activeSpecialTab = SpecialTab.HOME;
+    private String selectedEntityId = null;
 
     public BestiaryScreen() {
         super(Component.translatable("gui.r3ct_bestiary.catalog.title"));
@@ -120,6 +127,37 @@ public class BestiaryScreen extends Screen {
         return new ItemStack(Items.SPAWNER);
     }
 
+    // Metoda pomocnicza tworząca Manekina do zbadania atrybutów i renderowania 3D
+    private net.minecraft.world.entity.LivingEntity getOrCreateDummy(String entityId) {
+        if (dummyCache.containsKey(entityId)) {
+            return dummyCache.get(entityId);
+        }
+
+        if (this.minecraft == null || this.minecraft.level == null) return null;
+
+        EntityType<?> type = net.minecraft.core.registries.BuiltInRegistries.ENTITY_TYPE.get(Identifier.parse(entityId)).map(net.minecraft.core.Holder::value).orElse(null);
+        if (type != null) {
+            try {
+                net.minecraft.world.entity.Entity entity = type.create(this.minecraft.level, net.minecraft.world.entity.EntitySpawnReason.COMMAND);
+                if (entity instanceof net.minecraft.world.entity.LivingEntity living) {
+
+                    // Bezpieczne ubranie mobów na kliencie (zastępuje finalizeSpawn)
+                    if (type == EntityType.WITHER_SKELETON) living.setItemSlot(net.minecraft.world.entity.EquipmentSlot.MAINHAND, new ItemStack(Items.STONE_SWORD));
+                    else if (type == EntityType.VINDICATOR) living.setItemSlot(net.minecraft.world.entity.EquipmentSlot.MAINHAND, new ItemStack(Items.IRON_AXE));
+                    else if (type == EntityType.PIGLIN_BRUTE) living.setItemSlot(net.minecraft.world.entity.EquipmentSlot.MAINHAND, new ItemStack(Items.GOLDEN_AXE));
+                    else if (type == EntityType.SKELETON) living.setItemSlot(net.minecraft.world.entity.EquipmentSlot.MAINHAND, new ItemStack(Items.BOW));
+                    else if (type == EntityType.PILLAGER) living.setItemSlot(net.minecraft.world.entity.EquipmentSlot.MAINHAND, new ItemStack(Items.CROSSBOW));
+
+                    dummyCache.put(entityId, living);
+                    return living;
+                }
+            } catch (Exception ignored) {}
+        }
+
+        dummyCache.put(entityId, null);
+        return null;
+    }
+
     @Override
     public void extractRenderState(@NonNull GuiGraphicsExtractor guiGraphics, int mouseX, int mouseY, float partialTick) {
         this.extractTransparentBackground(guiGraphics);
@@ -147,6 +185,8 @@ public class BestiaryScreen extends Screen {
 
         if (activeSpecialTab == SpecialTab.NONE && !cachedCategories.isEmpty()) {
             renderItemGrid(guiGraphics, bookStartX, bookStartY, scaledMouseX, scaledMouseY, mouseX, mouseY, deltaTime);
+        } else if (activeSpecialTab == SpecialTab.DETAILS && selectedEntityId != null) {
+            renderDetailsTab(guiGraphics, bookStartX, bookStartY, scaledMouseX, scaledMouseY, mouseX, mouseY);
         } else if (activeSpecialTab == SpecialTab.HOME) {
             renderHomeTab(guiGraphics, bookStartX, bookStartY, scaledMouseX, scaledMouseY, mouseX, mouseY, deltaTime);
         } else if (activeSpecialTab == SpecialTab.INFO) {
@@ -390,7 +430,7 @@ public class BestiaryScreen extends Screen {
             int currentY = tabStartY + (i * 30);
 
             boolean isHovered = scaledMouseX >= baseTabX && scaledMouseX <= baseTabX + tabW && scaledMouseY >= currentY && scaledMouseY <= currentY + tabH;
-            boolean isSelected = (activeSpecialTab == SpecialTab.NONE && actualIndex == selectedTabIndex);
+            boolean isSelected = ((activeSpecialTab == SpecialTab.NONE || activeSpecialTab == SpecialTab.DETAILS) && actualIndex == selectedTabIndex);
 
             int finalX = (isHovered || isSelected) ? baseTabX - 2 : baseTabX;
             guiGraphics.blitSprite(RenderPipelines.GUI_TEXTURED, (isHovered || isSelected) ? TAB_SELECTED : TAB_UNSELECTED, finalX, currentY, tabW, tabH, 0xFFFFF2D4);
@@ -472,10 +512,6 @@ public class BestiaryScreen extends Screen {
             guiGraphics.fill(barX, barY, barX + fillW, barY + 1, 0x44FFFFFF);
         }
 
-        if (scaledMouseX >= barX && scaledMouseX <= barX + barW && scaledMouseY >= barY && scaledMouseY <= barY + barH) {
-            guiGraphics.setTooltipForNextFrame(this.font, Component.translatable("gui.r3ct_bestiary.catalog.category_progress").withStyle(s -> s.withColor(0xFFAAAAAA)), rawMouseX, rawMouseY);
-        }
-
         int totalRows = (int) Math.ceil((double) items.size() / columns);
         int maxScroll = Math.max(0, totalRows - visibleRows);
         int gridStartX = bookX + 49;
@@ -555,12 +591,8 @@ public class BestiaryScreen extends Screen {
                 gridIcon = Component.literal("✔");
                 tooltipIcon = Component.literal("✔");
                 finalIconColor = 0xFF55FF55;
-
-                if (starLevel == 3) {
-                    progressColor = 0xFFFFD700;
-                } else {
-                    progressColor = 0xFFFFAA00;
-                }
+                // ZMIANA: Gdy mamy max poziom (3 poziom), liczby stają się ZIELONE (0xFF55FF55)
+                progressColor = (starLevel == 3) ? 0xFF55FF55 : 0xFFFFAA00;
             } else if (currentKills > 0) {
                 gridIcon = null;
                 tooltipIcon = Component.literal("✘");
@@ -584,12 +616,19 @@ public class BestiaryScreen extends Screen {
                 int checkY = starLevel > 0 ? itemY + 1 : itemY + 4;
                 guiGraphics.text(this.font, gridIcon, itemX + 8 - (iconW / 2), checkY, finalIconColor, true);
 
+                // ZMIANA: Rysowanie fizycznych przedmiotów z gry (Papier) jako malutkich kartek
                 if (starLevel > 0) {
-                    String stars = "★".repeat(starLevel);
-                    int starW = this.font.width(stars);
-                    guiGraphics.text(this.font, stars, itemX + 8 - (starW / 2), itemY + 9, 0xFFFFD700, true);
+                    guiGraphics.pose().pushMatrix();
+                    float totalWidth = starLevel * 8.0f; // Każda kartka po zeskalowaniu ma 8 pikseli
+                    float startX = itemX + 8.0f - (totalWidth / 2.0f); // Centrowanie
 
-                    tooltipIcon = tooltipIcon.copy().append(Component.literal(" " + stars).withStyle(s -> s.withColor(0xFFFFD700)));
+                    guiGraphics.pose().translate(startX, itemY + 10.0f); // 200 Z żeby rysowało na samym wierzchu
+                    guiGraphics.pose().scale(0.5f, 0.5f); // Zmniejszenie ikony o połowę!
+
+                    for (int s = 0; s < starLevel; s++) {
+                        guiGraphics.item(new ItemStack(Items.PAPER), s * 16, 0); // Renderowanie z odstępami
+                    }
+                    guiGraphics.pose().popMatrix();
                 }
             }
 
@@ -609,7 +648,6 @@ public class BestiaryScreen extends Screen {
 
                 itemTooltip.add(modifiedName);
 
-                // NOWOŚĆ: Logika z informacją o akcji na podstawie kategorii
                 if (type != null) {
                     String bestiaryCat = MobProgressHandler.getBestiaryCategory(entityId, type.getCategory());
                     if (bestiaryCat.equals("creatures")) {
@@ -619,15 +657,220 @@ public class BestiaryScreen extends Screen {
                     }
                 }
 
+                itemTooltip.add(Component.literal(" "));
+
+                int totalPages = (isCollected ? 1 : 0) + starLevel;
+
+                // AKTUALIZACJA: Zielony kolor (§a) dla maksymalnego poziomu (4 strony), w innych wypadkach żółty (§e)
+                String pageColorCode = (starLevel == 3) ? "§a" : "§e";
+
+                // Usunięto również tekstowy symbol ▤ z końca linijki
+                itemTooltip.add(Component.literal("§7Zebrane strony: " + pageColorCode + totalPages + " / 4"));
+                itemTooltip.add(Component.literal("§8(Kliknij, aby otworzyć dziennik)"));
+
                 guiGraphics.setComponentTooltipForNextFrame(this.font, itemTooltip, rawMouseX, rawMouseY);
             }
         }
     }
 
+    // --- NOWA METODA: Renderowanie Strony Badawczej Moba (Układ Pionowy - Poprawione Wymiary) ---
+    private void renderDetailsTab(GuiGraphicsExtractor guiGraphics, int bookX, int bookY, double scaledMouseX, double scaledMouseY, int rawMouseX, int rawMouseY) {
+        if (selectedEntityId == null) return;
+
+        EntityType<?> type = net.minecraft.core.registries.BuiltInRegistries.ENTITY_TYPE.get(Identifier.parse(selectedEntityId)).map(net.minecraft.core.Holder::value).orElse(null);
+        if (type == null) return;
+
+        net.minecraft.world.entity.LivingEntity dummy = getOrCreateDummy(selectedEntityId);
+        int currentKills = ClientPlayerData.killCounts.getOrDefault(selectedEntityId, 0);
+        List<Integer> thresholds = MobProgressHandler.getProgressThresholds(selectedEntityId, type.getCategory());
+
+        int baseReq = thresholds.size() > 0 ? thresholds.get(0) : 1;
+        int star1Req = thresholds.size() > 1 ? thresholds.get(1) : baseReq;
+        int star2Req = thresholds.size() > 2 ? thresholds.get(2) : star1Req;
+        int star3Req = thresholds.size() > 3 ? thresholds.get(3) : star2Req;
+
+        boolean isCollected = currentKills >= baseReq;
+        int starLevel = 0;
+        if (currentKills >= star3Req && star3Req > baseReq) starLevel = 3;
+        else if (currentKills >= star2Req && star2Req > baseReq) starLevel = 2;
+        else if (currentKills >= star1Req && star1Req > baseReq) starLevel = 1;
+
+        int totalPages = (isCollected ? 1 : 0) + starLevel;
+        int centerX = bookX + (RENDER_SIZE / 2);
+
+        // ==== GÓRA: WYCENTROWANY MODEL 3D ====
+        int boxX0 = centerX - 60;
+        int boxY0 = bookY + 20;
+        int boxX1 = centerX + 60;
+        int boxY1 = bookY + 100; // Mniejsze od dołu o 10 pikseli (było 110)
+
+        guiGraphics.fill(boxX0, boxY0, boxX1, boxY1, 0x11000000); // Tło podglądu
+
+        if (dummy != null && isCollected) {
+            float maxDim = Math.max(dummy.getBbWidth(), dummy.getBbHeight());
+            int scale = (int) (40 / Math.max(1.0f, maxDim / 1.5f));
+
+            net.minecraft.client.gui.screens.inventory.InventoryScreen.extractEntityInInventoryFollowsMouse(
+                    guiGraphics, boxX0 + 2, boxY0 + 2, boxX1 - 2, boxY1 - 2,
+                    scale, 0.0625F, (float) scaledMouseX, (float) scaledMouseY, dummy
+            );
+        } else {
+            Component unknown = Component.literal("?").withStyle(net.minecraft.ChatFormatting.GOLD);
+            guiGraphics.pose().pushMatrix();
+            guiGraphics.pose().translate((float)centerX, (float)(boxY0 + 40)); // Dostosowane centrowanie pytajnika
+            guiGraphics.pose().scale(4.0f, 4.0f);
+            guiGraphics.text(this.font, unknown, -this.font.width(unknown) / 2, -this.font.lineHeight / 2, 0xFFFFAA00, false);
+            guiGraphics.pose().popMatrix();
+        }
+
+        // ==== POD MODELEM: NAZWA I POSTĘP ====
+        Component title = type.getDescription();
+        guiGraphics.text(this.font, title, centerX - (this.font.width(title) / 2), bookY + 105, 0xFF000000, false);
+
+        // ZMIANA: Rysowanie tekstu z uwzględnieniem fizycznej, uroczej ikonki obok!
+        Component progressText = Component.literal("Zebrane strony: " + totalPages + "/4").withStyle(net.minecraft.ChatFormatting.DARK_GRAY);
+        int textW = this.font.width(progressText);
+        int iconW = 10; // Przewidywana szerokość zminiaturyzowanego papieru
+        int totalW = textW + iconW + 2; // +2 px na odstęp
+        int startX = centerX - (totalW / 2);
+
+        guiGraphics.text(this.font, progressText, startX, bookY + 118, 0xFF333333, false);
+
+        // Rysujemy fizyczną ikonkę Papieru obok wyśrodkowanego tekstu
+        guiGraphics.pose().pushMatrix();
+        guiGraphics.pose().translate(startX + textW + 2, bookY + 116);
+        guiGraphics.pose().scale(0.6f, 0.6f); // Lekko zmniejszona do 60% normy
+        guiGraphics.item(new ItemStack(Items.PAPER), 0, 0);
+        guiGraphics.pose().popMatrix();
+
+        // ==== DÓŁ: SCROLLOWANE STATYSTYKI NA CAŁĄ SZEROKOŚĆ ====
+        int textX = bookX + 50;
+        int listStartY = bookY + 135; // Wydłużone o 10px do góry (było 145)
+        int listHeight = 80;  // Wydłużone o 10px do góry i o 5px w dół (wzrost wysokości łącznie o 15px, było 65)
+
+        // Rysowanie paska scrolla
+        if (maxDetailsScroll > 0) {
+            int trackX = bookX + 199; // Stabilna pozycja klasycznego paska
+            int trackY = listStartY;
+            guiGraphics.fill(trackX, trackY, trackX + 4, trackY + listHeight, 0xFF1A0A04);
+            float scrollFraction = (float) detailsScroll / maxDetailsScroll;
+            int thumbH = Math.max(12, (int) (((float) listHeight / (listHeight + maxDetailsScroll)) * listHeight));
+            int thumbY = trackY + (int) (scrollFraction * (listHeight - thumbH));
+            guiGraphics.fill(trackX, thumbY, trackX + 4, thumbY + thumbH, isScrolling ? 0xFFA07A5A : 0xFF8A5A3A);
+        }
+
+        // Aktywacja "nożyczek" pod listę (nowe granice Y: 135, H: 80)
+        guiGraphics.enableScissor(bookX + 40, listStartY, bookX + 195, listStartY + listHeight);
+
+        guiGraphics.pose().pushMatrix();
+        guiGraphics.pose().translate(0, -detailsScroll);
+
+        int currentY = listStartY;
+
+        // 1. ZALICZENIE
+        guiGraphics.text(this.font, "§l1. Informacje Ogólne", textX, currentY, 0xFF333333, false); currentY += 12;
+        if (totalPages >= 1) {
+            String typeName = "Zwykły";
+            var holder = type.builtInRegistryHolder();
+            if (holder.is(net.minecraft.tags.EntityTypeTags.UNDEAD)) typeName = "Nieumarły";
+            else if (holder.is(net.minecraft.tags.EntityTypeTags.ARTHROPOD)) typeName = "Stawonóg";
+            else if (holder.is(net.minecraft.tags.EntityTypeTags.AQUATIC)) typeName = "Wodny";
+            else if (holder.is(net.minecraft.tags.EntityTypeTags.ILLAGER)) typeName = "Złosadnik";
+            else if (holder.is(net.minecraft.tags.EntityTypeTags.SKELETONS)) typeName = "Szkielet";
+            else if (type.getCategory() == net.minecraft.world.entity.MobCategory.MONSTER) typeName = "Potwór";
+            else if (type.getCategory() == net.minecraft.world.entity.MobCategory.CREATURE) typeName = "Zwierzę";
+            guiGraphics.text(this.font, "§7Rodzina: §0" + typeName, textX, currentY, 0xFFFFFFFF, false);
+        } else {
+            guiGraphics.text(this.font, "§7Rodzina: §6?", textX, currentY, 0xFFFFFFFF, false);
+        }
+        currentY += 16;
+
+        // 2. PIERWSZA GWIAZDKA
+        guiGraphics.text(this.font, "§l2. Budowa Ciała", textX, currentY, 0xFF333333, false); currentY += 12;
+        if (totalPages >= 2 && dummy != null) {
+            int hp = Math.round(dummy.getMaxHealth());
+            int armor = dummy.getArmorValue();
+            String size = String.format(java.util.Locale.US, "%.1fm x %.1fm", dummy.getBbWidth(), dummy.getBbHeight());
+            guiGraphics.text(this.font, "§7Życie: §c" + hp + " ❤", textX, currentY, 0xFFFFFFFF, false); currentY += 10;
+            guiGraphics.text(this.font, "§7Pancerz: §9" + armor + " 🛡", textX, currentY, 0xFFFFFFFF, false); currentY += 10;
+            guiGraphics.text(this.font, "§7Wymiary: §0" + size, textX, currentY, 0xFFFFFFFF, false);
+        } else {
+            guiGraphics.text(this.font, "§7Życie: §6?", textX, currentY, 0xFFFFFFFF, false); currentY += 10;
+            guiGraphics.text(this.font, "§7Pancerz: §6?", textX, currentY, 0xFFFFFFFF, false); currentY += 10;
+            guiGraphics.text(this.font, "§7Wymiary: §6?", textX, currentY, 0xFFFFFFFF, false);
+        }
+        currentY += 16;
+
+        // 3. DRUGA GWIAZDKA
+        guiGraphics.text(this.font, "§l3. Nawyki i Atak", textX, currentY, 0xFF333333, false); currentY += 12;
+        if (totalPages >= 3 && dummy != null) {
+            String dmgStr = "Brak";
+            var dmgAttr = dummy.getAttribute(net.minecraft.world.entity.ai.attributes.Attributes.ATTACK_DAMAGE);
+            double rawDamage = 0;
+            if (dmgAttr != null && dmgAttr.getValue() > 0) {
+                rawDamage = dmgAttr.getValue();
+                dmgStr = Math.round(rawDamage) + " ⚔";
+            }
+
+            boolean holdsRangedWeapon = dummy.getMainHandItem().getItem() instanceof net.minecraft.world.item.ProjectileWeaponItem ||
+                    dummy.getOffhandItem().getItem() instanceof net.minecraft.world.item.ProjectileWeaponItem;
+
+            if (type == EntityType.CREEPER) dmgStr = "Eksplozja 💥";
+            else if (type == EntityType.WARDEN) dmgStr += " / Boom 🔊";
+            else if (type == EntityType.GHAST || type == EntityType.BLAZE || type == EntityType.BREEZE || type == EntityType.SHULKER || type == EntityType.WITCH) {
+                dmgStr = "Magia 🧪";
+            } else if (holdsRangedWeapon) {
+                if (rawDamage <= 3.0) dmgStr = "Dystansowe 🏹";
+                else dmgStr += " / Dystans 🏹";
+            }
+
+            String rangeStr = "Brak";
+            var rangeAttr = dummy.getAttribute(net.minecraft.world.entity.ai.attributes.Attributes.FOLLOW_RANGE);
+            if (rangeAttr != null) rangeStr = Math.round(rangeAttr.getValue()) + " blk";
+
+            String speedStr = "Brak";
+            var speedAttr = dummy.getAttribute(net.minecraft.world.entity.ai.attributes.Attributes.MOVEMENT_SPEED);
+            if (speedAttr != null) speedStr = String.format(java.util.Locale.US, "%.1f blk/s", speedAttr.getValue() * 43.0);
+
+            guiGraphics.text(this.font, "§7Obrażenia: §c" + dmgStr, textX, currentY, 0xFFFFFFFF, false); currentY += 10;
+            guiGraphics.text(this.font, "§7Wzrok: §3" + rangeStr, textX, currentY, 0xFFFFFFFF, false); currentY += 10;
+            guiGraphics.text(this.font, "§7Szybkość: §0" + speedStr, textX, currentY, 0xFFFFFFFF, false);
+        } else {
+            guiGraphics.text(this.font, "§7Obrażenia: §6?", textX, currentY, 0xFFFFFFFF, false); currentY += 10;
+            guiGraphics.text(this.font, "§7Wzrok: §6?", textX, currentY, 0xFFFFFFFF, false); currentY += 10;
+            guiGraphics.text(this.font, "§7Szybkość: §6?", textX, currentY, 0xFFFFFFFF, false);
+        }
+        currentY += 16;
+
+        // 4. TRZECIA GWIAZDKA
+        guiGraphics.text(this.font, "§l4. Odporności", textX, currentY, 0xFF333333, false); currentY += 12;
+        if (totalPages >= 4 && dummy != null) {
+            String fireStr = dummy.fireImmune() ? "§2Tak" : "§cNie";
+            String kbStr = "0%";
+            var kbAttr = dummy.getAttribute(net.minecraft.world.entity.ai.attributes.Attributes.KNOCKBACK_RESISTANCE);
+            if (kbAttr != null) kbStr = ((int) Math.round(kbAttr.getValue() * 100)) + "%";
+
+            guiGraphics.text(this.font, "§7Ogień: " + fireStr, textX, currentY, 0xFFFFFFFF, false); currentY += 10;
+            guiGraphics.text(this.font, "§7Odrzut: §5" + kbStr, textX, currentY, 0xFFFFFFFF, false);
+        } else {
+            guiGraphics.text(this.font, "§7Ogień: §6?", textX, currentY, 0xFFFFFFFF, false); currentY += 10;
+            guiGraphics.text(this.font, "§7Odrzut: §6?", textX, currentY, 0xFFFFFFFF, false);
+        }
+
+        currentY += 10;
+
+        guiGraphics.pose().popMatrix();
+        guiGraphics.disableScissor();
+
+        // Ustawiamy ile potrzebujemy wyjechać w dół żeby pokazać cały tekst
+        maxDetailsScroll = Math.max(0, (currentY - listStartY) - listHeight);
+    }
+
     private void updateScrollbar(double mouseY) {
-        int trackY = ((this.height - RENDER_SIZE) / 2) + 47;
+        int bookStartY = ((this.height - RENDER_SIZE) / 2); // Względny początek książki
 
         if (activeSpecialTab == SpecialTab.HOME) {
+            int trackY = bookStartY + 47;
             int trackH = 164;
             int maxScroll = Math.max(0, cachedCategories.size() - 5);
             if (maxScroll > 0) {
@@ -635,12 +878,20 @@ public class BestiaryScreen extends Screen {
                 homeScroll = Math.round(fraction * maxScroll);
             }
         } else if (activeSpecialTab == SpecialTab.NONE && !cachedCategories.isEmpty()) {
+            int trackY = bookStartY + 47;
             int trackH = 166;
             EntityTypeScanner.CategoryData cat = cachedCategories.get(selectedTabIndex);
             int maxScroll = Math.max(0, (int) Math.ceil(cat.entityIds.size() / 5.0) - 5);
             if (maxScroll > 0) {
                 float fraction = Mth.clamp((float)(mouseY - trackY) / trackH, 0.0f, 1.0f);
                 currentRowScroll = Math.round(fraction * maxScroll);
+            }
+        } else if (activeSpecialTab == SpecialTab.DETAILS) {
+            int trackY = bookStartY + 135; // Zmieniono na nowy start (135)
+            int trackH = 80;               // Zmieniono na nową wysokość (80)
+            if (maxDetailsScroll > 0) {
+                float fraction = Mth.clamp((float)(mouseY - trackY) / trackH, 0.0f, 1.0f);
+                detailsScroll = Math.round(fraction * maxDetailsScroll);
             }
         }
     }
@@ -700,6 +951,40 @@ public class BestiaryScreen extends Screen {
             if (mouseX >= trackX - 2 && mouseX <= trackX + 6 && mouseY >= bookStartY + 47 && mouseY <= bookStartY + 47 + 166) {
                 isScrolling = true; updateScrollbar(mouseY); return true;
             }
+
+            // Kliknięcie w moba na siatce - otwiera szczegóły
+            EntityTypeScanner.CategoryData activeCat = cachedCategories.get(selectedTabIndex);
+            List<String> items = activeCat.entityIds;
+            int columns = 5;
+            int visibleRows = 5;
+            int cellW = 30;
+            int cellH = 34;
+            int gridStartX = bookStartX + 49;
+            int gridStartY = bookStartY + 46;
+
+            int startIndex = currentRowScroll * columns;
+            int endIndex = Math.min(startIndex + (columns * visibleRows), items.size());
+
+            for (int i = startIndex; i < endIndex; i++) {
+                int index = i - startIndex;
+                int slotX = gridStartX + (index % columns * cellW);
+                int slotY = gridStartY + (index / columns * cellH);
+
+                if (mouseX >= slotX && mouseX < slotX + cellW && mouseY >= slotY && mouseY < slotY + cellH) {
+                    selectedEntityId = items.get(i);
+                    activeSpecialTab = SpecialTab.DETAILS;
+                    this.minecraft.getSoundManager().play(net.minecraft.client.resources.sounds.SimpleSoundInstance.forUI(net.minecraft.sounds.SoundEvents.UI_BUTTON_CLICK, 1.0F));
+                    return true;
+                }
+            }
+        } else if (activeSpecialTab == SpecialTab.DETAILS) {
+            int trackX = bookStartX + 199;
+            // Sprawdzanie pozycji dostosowane do nowych wymiarów (Y: 135, H: 80)
+            if (mouseX >= trackX - 2 && mouseX <= trackX + 6 && mouseY >= bookStartY + 135 && mouseY <= bookStartY + 135 + 80) {
+                isScrolling = true;
+                updateScrollbar(mouseY);
+                return true;
+            }
         }
 
         return super.mouseClicked(event, doubleClick);
@@ -742,7 +1027,14 @@ public class BestiaryScreen extends Screen {
             int maxScroll = Math.max(0, (int) Math.ceil(cat.entityIds.size() / 5.0) - 5);
             if (scrollY > 0 && currentRowScroll > 0) currentRowScroll--;
             else if (scrollY < 0 && currentRowScroll < maxScroll) currentRowScroll++;
-        }
+        } else if (activeSpecialTab == SpecialTab.DETAILS) {
+        if (scrollY > 0 && detailsScroll > 0) detailsScroll -= 15; // Scroll w górę
+        else if (scrollY < 0 && detailsScroll < maxDetailsScroll) detailsScroll += 15; // Scroll w dół
+
+        // Zabezpieczenie przed przekroczeniem limitów
+        detailsScroll = Mth.clamp(detailsScroll, 0, maxDetailsScroll);
+        return true;
+    }
 
         return true;
     }
@@ -753,9 +1045,21 @@ public class BestiaryScreen extends Screen {
     }
 
     @Override
+    public void onClose() {
+        if (activeSpecialTab == SpecialTab.DETAILS) {
+            // Wciśnięcie ESC w detalach po prostu cofa nas do siatki
+            activeSpecialTab = SpecialTab.NONE;
+            this.minecraft.getSoundManager().play(net.minecraft.client.resources.sounds.SimpleSoundInstance.forUI(net.minecraft.sounds.SoundEvents.UI_BUTTON_CLICK, 1.0F));
+        } else {
+            // Wciśnięcie ESC w każdym innym miejscu zamyka okno
+            super.onClose();
+        }
+    }
+
+    @Override
     public boolean keyPressed(net.minecraft.client.input.KeyEvent event) {
         if (com.r3ct.bestiary.platform.Services.PLATFORM.isCatalogKey(event)) {
-            this.onClose();
+            super.onClose(); // Wymusza całkowite zamknięcie ekranu z pominięciem logiki "Wstecz"
             return true;
         }
         return super.keyPressed(event);
