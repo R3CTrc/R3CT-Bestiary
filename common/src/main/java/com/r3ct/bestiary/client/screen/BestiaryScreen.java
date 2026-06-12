@@ -2,7 +2,7 @@ package com.r3ct.bestiary.client.screen;
 
 import com.r3ct.bestiary.client.data.ClientPlayerData;
 import com.r3ct.bestiary.config.BestiaryConfig;
-import com.r3ct.bestiary.logic.MobKillHandler;
+import com.r3ct.bestiary.logic.MobProgressHandler;
 import com.r3ct.bestiary.scanner.EntityTypeScanner;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.gui.screens.Screen;
@@ -82,7 +82,7 @@ public class BestiaryScreen extends Screen {
         EntityType<?> type = net.minecraft.core.registries.BuiltInRegistries.ENTITY_TYPE.get(Identifier.parse(entityId)).map(net.minecraft.core.Holder::value).orElse(null);
         if (type == null) return false;
 
-        List<Integer> thresholds = MobKillHandler.getKillThresholds(entityId, type.getCategory());
+        List<Integer> thresholds = MobProgressHandler.getProgressThresholds(entityId, type.getCategory());
         return !thresholds.isEmpty() && count >= thresholds.get(0);
     }
 
@@ -509,7 +509,7 @@ public class BestiaryScreen extends Screen {
 
             int currentKills = ClientPlayerData.killCounts.getOrDefault(entityId, 0);
 
-            List<Integer> thresholds = type != null ? MobKillHandler.getKillThresholds(entityId, type.getCategory()) : java.util.Collections.singletonList(1);
+            List<Integer> thresholds = type != null ? MobProgressHandler.getProgressThresholds(entityId, type.getCategory()) : java.util.Collections.singletonList(1);
             int baseReq = thresholds.size() > 0 ? thresholds.get(0) : 1;
             int star1Req = thresholds.size() > 1 ? thresholds.get(1) : baseReq;
             int star2Req = thresholds.size() > 2 ? thresholds.get(2) : star1Req;
@@ -608,6 +608,17 @@ public class BestiaryScreen extends Screen {
                         .append(tooltipIcon.copy().withStyle(s -> s.withColor(finalIconColor).withBold(true)));
 
                 itemTooltip.add(modifiedName);
+
+                // NOWOŚĆ: Logika z informacją o akcji na podstawie kategorii
+                if (type != null) {
+                    String bestiaryCat = MobProgressHandler.getBestiaryCategory(entityId, type.getCategory());
+                    if (bestiaryCat.equals("creatures")) {
+                        itemTooltip.add(Component.translatable("gui.r3ct_bestiary.catalog.action.any").withStyle(net.minecraft.ChatFormatting.GREEN));
+                    } else {
+                        itemTooltip.add(Component.translatable("gui.r3ct_bestiary.catalog.action.kill").withStyle(net.minecraft.ChatFormatting.RED));
+                    }
+                }
+
                 guiGraphics.setComponentTooltipForNextFrame(this.font, itemTooltip, rawMouseX, rawMouseY);
             }
         }

@@ -1,17 +1,19 @@
 {
   "key.category.r3ct_bestiary.main": "R3CT Bestiary",
   "key.r3ct.open_catalog": "Open Bestiary",
-  "r3ct_bestiary:main": "R3CT Bestiary",
+  "itemGroup.r3ct_bestiary.main_tab": "R3CT Bestiary",
 
   "gui.r3ct_bestiary.catalog.title": "Bestiary",
+  "gui.r3ct_bestiary.catalog.tab_home": "Categories",
+  "gui.r3ct_bestiary.catalog.tab_info": "Information",
+  "gui.r3ct_bestiary.catalog.tab_leaderboard": "Hunter Rankings",
   "gui.r3ct_bestiary.catalog.prev_categories": "Previous categories",
   "gui.r3ct_bestiary.catalog.next_categories": "Next categories",
   "gui.r3ct_bestiary.catalog.gathered": "Researched: %s / %s",
   "gui.r3ct_bestiary.catalog.gathered_space": "Researched: %s / %s ",
   "gui.r3ct_bestiary.catalog.category_progress": "Category progress",
-  "gui.r3ct_bestiary.catalog.tab_home": "Categories",
-  "gui.r3ct_bestiary.catalog.tab_info": "Information",
-  "gui.r3ct_bestiary.catalog.tab_leaderboard": "Hunter Rankings",
+  "gui.r3ct_bestiary.catalog.action.any": "Required: Any Interaction",
+  "gui.r3ct_bestiary.catalog.action.kill": "Required: Kill",
 
   "gui.r3ct_bestiary.leaderboard.total_kills": "Total Score",
 
@@ -23,10 +25,8 @@
   "gui.r3ct_bestiary.config.main.title": "Settings: R3CT Bestiary",
   "gui.r3ct_bestiary.config.main.client_button": "Client Settings",
   "gui.r3ct_bestiary.config.main.server_button": "Server Settings",
-
   "gui.r3ct_bestiary.config.client.scale": "Bestiary Scale",
   "gui.r3ct_bestiary.config.client.scale_desc": "Bestiary Scale:",
-
   "gui.r3ct_bestiary.config.server.mobs_button": "Edit Mob Config",
   "gui.r3ct_bestiary.config.server.rewards_button": "Edit Rewards",
 
@@ -42,11 +42,9 @@
   "advancement.r3ct_bestiary.root.title": "R3CT Bestiary",
   "advancement.r3ct_bestiary.root.desc": "Open your Bestiary and start the hunt.",
   "advancement.r3ct_bestiary.first_kill.title": "First Hunt",
-  "advancement.r3ct_bestiary.first_kill.desc": "Defeat your first mob for the Bestiary!",
+  "advancement.r3ct_bestiary.first_kill.desc": "Research your first species for the Bestiary!",
   "advancement.r3ct_bestiary.mobs_100.title": "Monster Slayer",
-  "advancement.r3ct_bestiary.mobs_100.desc": "Slay 100 mobs.",
+  "advancement.r3ct_bestiary.mobs_100.desc": "Fully research 100 species.",
   "advancement.r3ct_bestiary.all_completed.title": "Master Hunter",
-  "advancement.r3ct_bestiary.all_completed.desc": "Complete the Bestiary in 100%!",
-
-  "itemGroup.r3ct_bestiary.main_tab": "R3CT Bestiary"
+  "advancement.r3ct_bestiary.all_completed.desc": "Complete the Bestiary in 100%!"
 }

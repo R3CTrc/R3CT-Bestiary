@@ -24,7 +24,7 @@ public class BestiaryClientNeoForge {
             KeyMappings.openCatalogKey = new KeyMapping(
                     "key.r3ct.open_catalog",
                     InputConstants.Type.KEYSYM,
-                    GLFW.GLFW_KEY_K,
+                    GLFW.GLFW_KEY_J,
                     R3CT_BESTIARY_CATEGORY
             );
 

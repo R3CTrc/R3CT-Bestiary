@@ -19,7 +19,7 @@ public class BestiaryClientFabric implements ClientModInitializer {
         KeyMappings.openCatalogKey = KeyMappingHelper.registerKeyMapping(new KeyMapping(
                 "key.r3ct.open_catalog",
                 com.mojang.blaze3d.platform.InputConstants.Type.KEYSYM,
-                GLFW.GLFW_KEY_K,
+                GLFW.GLFW_KEY_J,
                 R3CT_BESTIARY_CATEGORY
         ));
 

@@ -1,32 +1,32 @@
 {
   "key.category.r3ct_bestiary.main": "R3CT Bestiary",
   "key.r3ct.open_catalog": "Otwórz Bestiariusz",
-  "r3ct_bestiary:main": "R3CT Bestiary",
+  "itemGroup.r3ct_bestiary.main_tab": "R3CT Bestiary",
 
   "gui.r3ct_bestiary.catalog.title": "Bestiariusz",
+  "gui.r3ct_bestiary.catalog.tab_home": "Kategorie",
+  "gui.r3ct_bestiary.catalog.tab_info": "Informacje",
+  "gui.r3ct_bestiary.catalog.tab_leaderboard": "Ranking Łowców",
   "gui.r3ct_bestiary.catalog.prev_categories": "Poprzednie kategorie",
   "gui.r3ct_bestiary.catalog.next_categories": "Następne kategorie",
   "gui.r3ct_bestiary.catalog.gathered": "Zbadano: %s / %s",
   "gui.r3ct_bestiary.catalog.gathered_space": "Zbadano: %s / %s ",
   "gui.r3ct_bestiary.catalog.category_progress": "Postęp kategorii",
-  "gui.r3ct_bestiary.catalog.tab_home": "Kategorie",
-  "gui.r3ct_bestiary.catalog.tab_info": "Informacje",
-  "gui.r3ct_bestiary.catalog.tab_leaderboard": "Ranking Łowców",
+  "gui.r3ct_bestiary.catalog.action.any": "Wymagane: Dowolna Interakcja",
+  "gui.r3ct_bestiary.catalog.action.kill": "Wymagane: Zabójstwo",
 
   "gui.r3ct_bestiary.leaderboard.total_kills": "Łączne punkty",
 
   "gui.r3ct_bestiary.info.rewards_title": "Nagrody Bestiariusza",
-  "gui.r3ct_bestiary.info.point1": "1. Badanie Potworów",
+  "gui.r3ct_bestiary.info.point1": "1. Badanie Gatunków",
   "gui.r3ct_bestiary.info.point2": "2. Kamienie Milowe",
   "gui.r3ct_bestiary.reward_xp_info": "Nagroda: %s §ePD",
 
   "gui.r3ct_bestiary.config.main.title": "Ustawienia: R3CT Bestiary",
   "gui.r3ct_bestiary.config.main.client_button": "Ustawienia Klienta",
   "gui.r3ct_bestiary.config.main.server_button": "Ustawienia Serwera",
-
   "gui.r3ct_bestiary.config.client.scale": "Skala Bestiariusza",
   "gui.r3ct_bestiary.config.client.scale_desc": "Skala Bestiariusza:",
-
   "gui.r3ct_bestiary.config.server.mobs_button": "Edytuj Konfigurację Mobów",
   "gui.r3ct_bestiary.config.server.rewards_button": "Edytuj Nagrody",
 
@@ -42,11 +42,9 @@
   "advancement.r3ct_bestiary.root.title": "R3CT Bestiary",
   "advancement.r3ct_bestiary.root.desc": "Otwórz Bestiariusz i rozpocznij wielkie łowy.",
   "advancement.r3ct_bestiary.first_kill.title": "Pierwsze Łowy",
-  "advancement.r3ct_bestiary.first_kill.desc": "Pokonaj swojego pierwszego moba do Bestiariusza!",
+  "advancement.r3ct_bestiary.first_kill.desc": "Zbadaj swój pierwszy gatunek do Bestiariusza!",
   "advancement.r3ct_bestiary.mobs_100.title": "Pogromca Potworów",
-  "advancement.r3ct_bestiary.mobs_100.desc": "Pokonaj 100 stworzeń.",
+  "advancement.r3ct_bestiary.mobs_100.desc": "Zbadaj w pełni 100 gatunków.",
   "advancement.r3ct_bestiary.all_completed.title": "Mistrz Bestiariusza",
-  "advancement.r3ct_bestiary.all_completed.desc": "Wypełnij cały Bestiariusz w 100%!",
-
-  "itemGroup.r3ct_bestiary.main_tab": "R3CT Bestiary"
+  "advancement.r3ct_bestiary.all_completed.desc": "Wypełnij cały Bestiariusz w 100%!"
 }

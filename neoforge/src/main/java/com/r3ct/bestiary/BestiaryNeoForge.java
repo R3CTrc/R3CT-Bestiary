@@ -3,7 +3,7 @@ package com.r3ct.bestiary;
 import com.r3ct.bestiary.client.data.ClientPlayerData;
 import com.r3ct.bestiary.config.BestiaryConfig;
 import com.r3ct.bestiary.network.SyncDataPayload;
-import com.r3ct.bestiary.logic.MobKillHandler;
+import com.r3ct.bestiary.logic.MobProgressHandler;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.resources.ResourceKey;
 import net.minecraft.server.level.ServerPlayer;
@@ -49,7 +49,7 @@ public class BestiaryNeoForge {
 
         registrar.playToServer(
                 com.r3ct.bestiary.network.RequestLeaderboardPayload.TYPE, com.r3ct.bestiary.network.RequestLeaderboardPayload.CODEC,
-                (payload, context) -> context.enqueueWork(() -> MobKillHandler.handleLeaderboardRequest((net.minecraft.server.level.ServerPlayer) context.player()))
+                (payload, context) -> context.enqueueWork(() -> MobProgressHandler.handleLeaderboardRequest((net.minecraft.server.level.ServerPlayer) context.player()))
         );
 
         registrar.playToClient(

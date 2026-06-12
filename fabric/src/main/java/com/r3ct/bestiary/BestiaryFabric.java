@@ -2,7 +2,7 @@ package com.r3ct.bestiary;
 
 import com.r3ct.bestiary.config.BestiaryConfig;
 import com.r3ct.bestiary.network.SyncDataPayload;
-import com.r3ct.bestiary.logic.MobKillHandler;
+import com.r3ct.bestiary.logic.MobProgressHandler;
 import net.fabricmc.api.ModInitializer;
 import net.fabricmc.fabric.api.networking.v1.PayloadTypeRegistry;
 import net.fabricmc.fabric.api.networking.v1.ServerPlayNetworking;
@@ -74,7 +74,7 @@ public class BestiaryFabric implements ModInitializer {
         });
 
         ServerPlayNetworking.registerGlobalReceiver(com.r3ct.bestiary.network.RequestLeaderboardPayload.TYPE, (payload, context) -> {
-            context.server().execute(() -> MobKillHandler.handleLeaderboardRequest(context.player()));
+            context.server().execute(() -> MobProgressHandler.handleLeaderboardRequest(context.player()));
         });
     }
 

@@ -20,7 +20,7 @@ import net.minecraft.world.item.Items;
 import java.util.ArrayList;
 import java.util.List;
 
-public class MobKillHandler {
+public class MobProgressHandler {
 
     private static void grantAdvancement(ServerPlayer player, String advancementId) {
         net.minecraft.server.MinecraftServer server = player.level().getServer();
@@ -32,23 +32,36 @@ public class MobKillHandler {
         }
     }
 
-    public static List<Integer> getKillThresholds(String entityId, MobCategory category) {
-        if (com.r3ct.bestiary.config.BestiaryConfig.customKillRequirements.containsKey(entityId)) {
-            return com.r3ct.bestiary.config.BestiaryConfig.customKillRequirements.get(entityId);
-        }
-
+    public static String getBestiaryCategory(String entityId, MobCategory category) {
         String namespace = entityId.split(":")[0];
+        String mobOverride = BestiaryConfig.mobCategoryOverrides.get(entityId);
+        String modOverride = BestiaryConfig.modCategoryOverrides.get(namespace);
 
-        if (com.r3ct.bestiary.config.BestiaryConfig.customBosses.contains(entityId) ||
-                com.r3ct.bestiary.config.BestiaryConfig.bossMods.contains(namespace)) {
-            return com.r3ct.bestiary.config.BestiaryConfig.defaultKillsBosses;
+        if (mobOverride != null && !mobOverride.isEmpty()) {
+            return mobOverride;
         }
-
+        if (modOverride != null && !modOverride.isEmpty()) {
+            return modOverride;
+        }
         if (category == MobCategory.MONSTER) {
-            return com.r3ct.bestiary.config.BestiaryConfig.defaultKillsMonsters;
+            return "monsters";
+        }
+        return "creatures";
+    }
+
+    public static List<Integer> getProgressThresholds(String entityId, MobCategory category) {
+        if (com.r3ct.bestiary.config.BestiaryConfig.customProgressRequirements.containsKey(entityId)) {
+            return com.r3ct.bestiary.config.BestiaryConfig.customProgressRequirements.get(entityId);
         }
 
-        return com.r3ct.bestiary.config.BestiaryConfig.defaultKillsCreatures;
+        String bestiaryCat = getBestiaryCategory(entityId, category);
+
+        if (bestiaryCat.equals("bosses")) {
+            return com.r3ct.bestiary.config.BestiaryConfig.defaultProgressBosses;
+        } else if (bestiaryCat.equals("creatures")) {
+            return com.r3ct.bestiary.config.BestiaryConfig.defaultProgressCreatures;
+        }
+        return com.r3ct.bestiary.config.BestiaryConfig.defaultProgressMonsters;
     }
 
     public static int getCompletedMobsCount(PlayerData data) {
@@ -59,7 +72,7 @@ public class MobKillHandler {
 
             EntityType<?> type = BuiltInRegistries.ENTITY_TYPE.get(Identifier.parse(entityId)).map(net.minecraft.core.Holder::value).orElse(null);
             if (type != null) {
-                List<Integer> thresholds = getKillThresholds(entityId, type.getCategory());
+                List<Integer> thresholds = getProgressThresholds(entityId, type.getCategory());
                 if (!thresholds.isEmpty() && count >= thresholds.get(0)) {
                     completedCount++;
                 }
@@ -76,7 +89,7 @@ public class MobKillHandler {
 
             EntityType<?> type = BuiltInRegistries.ENTITY_TYPE.get(Identifier.parse(entityId)).map(net.minecraft.core.Holder::value).orElse(null);
             if (type != null) {
-                List<Integer> thresholds = getKillThresholds(entityId, type.getCategory());
+                List<Integer> thresholds = getProgressThresholds(entityId, type.getCategory());
                 if (!thresholds.isEmpty()) {
                     int maxRequired = thresholds.get(thresholds.size() - 1);
                     totalValidKills += Math.min(count, maxRequired);
@@ -86,14 +99,30 @@ public class MobKillHandler {
         return totalValidKills;
     }
 
-    public static void handleMobKill(ServerPlayer player, EntityType<?> entityType) {
+    // --- DOSTĘPNE AKCJE (Wszystkie robią dokładnie to samo - dodają punkt postępu!) ---
+    public static void handleMobKill(ServerPlayer player, EntityType<?> entityType) { handleProgress(player, entityType); }
+    public static void handleMobBreed(ServerPlayer player, EntityType<?> entityType) { handleProgress(player, entityType); }
+    public static void handleMobTame(ServerPlayer player, EntityType<?> entityType) { handleProgress(player, entityType); }
+    public static void handleMobTrade(ServerPlayer player, EntityType<?> entityType) { handleProgress(player, entityType); }
+    public static void handleMobBuild(ServerPlayer player, EntityType<?> entityType) { handleProgress(player, entityType); }
+    // ----------------------------------------------------------------------------------
+
+    // Główny silnik dodawania punktów
+    private static void handleProgress(ServerPlayer player, EntityType<?> entityType) {
         MobCategory category = entityType.getCategory();
-
-        if (category == MobCategory.MISC) return;
-
         String entityId = BuiltInRegistries.ENTITY_TYPE.getKey(entityType).toString();
-        PlayerData data = ModState.getPlayerData(player.level().getServer(), player.getUUID());
 
+        boolean isAllowedMisc = (entityType == EntityType.VILLAGER ||
+                entityType == EntityType.IRON_GOLEM ||
+                entityType == EntityType.SNOW_GOLEM ||
+                entityType == EntityType.COPPER_GOLEM);
+
+        // Jeśli to MISC, ale NIE JEST dozwolonym mobem i NIE JEST wpisane w configu - ignorujemy (np. strzały, łódki)
+        if (category == MobCategory.MISC && !isAllowedMisc && !BestiaryConfig.mobCategoryOverrides.containsKey(entityId)) {
+            return;
+        }
+
+        PlayerData data = ModState.getPlayerData(player.level().getServer(), player.getUUID());
         data.lastKnownName = player.getName().getString();
 
         int currentKills = data.killCounts.getOrDefault(entityId, 0);
@@ -102,7 +131,7 @@ public class MobKillHandler {
 
         ModState.get(player.level().getServer()).setDirty();
 
-        List<Integer> thresholds = getKillThresholds(entityId, category);
+        List<Integer> thresholds = getProgressThresholds(entityId, category);
         if (thresholds.isEmpty()) return;
 
         int baseReq = thresholds.size() > 0 ? thresholds.get(0) : -1;
@@ -110,23 +139,27 @@ public class MobKillHandler {
         int star2Req = thresholds.size() > 2 ? thresholds.get(2) : -1;
         int star3Req = thresholds.size() > 3 ? thresholds.get(3) : -1;
 
+        String bestiaryCat = getBestiaryCategory(entityId, category);
+
+        // POBIERAMY ODPOWIEDNIĄ TABLICĘ XP DLA TEJ KATEGORII
+        List<Integer> xpThresholds;
+        if (bestiaryCat.equals("bosses")) {
+            xpThresholds = BestiaryConfig.xpBosses;
+        } else if (bestiaryCat.equals("monsters")) {
+            xpThresholds = BestiaryConfig.xpMonsters;
+        } else {
+            xpThresholds = BestiaryConfig.xpCreatures;
+        }
+
+        // BAZOWE UKOŃCZENIE
         if (newKills == baseReq) {
             BestiaryConfig.load();
 
             int completedBefore = getCompletedMobsCount(data) - 1;
             int completedAfter = completedBefore + 1;
 
-            String namespace = entityId.split(":")[0];
-            int xpToGive;
-
-            if (BestiaryConfig.customBosses.contains(entityId) || BestiaryConfig.bossMods.contains(namespace)) {
-                xpToGive = BestiaryConfig.xpBosses;
-            } else if (category == MobCategory.MONSTER) {
-                xpToGive = BestiaryConfig.xpMonsters;
-            } else {
-                xpToGive = BestiaryConfig.xpCreatures;
-            }
-
+            // Pobieramy pierwszy próg XP (indeks 0)
+            int xpToGive = xpThresholds.size() > 0 ? xpThresholds.get(0) : 0;
             player.giveExperiencePoints(xpToGive);
 
             player.level().playSound(null, player.blockPosition(),
@@ -187,12 +220,16 @@ public class MobKillHandler {
             }
             checkAndAwardCompletedCategories(player, data);
         }
+        // GWIAZDKI MISTRZOSTWA (Indeksy 1, 2, 3)
         else if (newKills == star1Req) {
-            handleStarUnlock(player, entityType, 1, BestiaryConfig.xpStar1);
+            int xpToGive = xpThresholds.size() > 1 ? xpThresholds.get(1) : 0;
+            handleStarUnlock(player, entityType, 1, xpToGive);
         } else if (newKills == star2Req) {
-            handleStarUnlock(player, entityType, 2, BestiaryConfig.xpStar2);
+            int xpToGive = xpThresholds.size() > 2 ? xpThresholds.get(2) : 0;
+            handleStarUnlock(player, entityType, 2, xpToGive);
         } else if (newKills == star3Req) {
-            handleStarUnlock(player, entityType, 3, BestiaryConfig.xpStar3);
+            int xpToGive = xpThresholds.size() > 3 ? xpThresholds.get(3) : 0;
+            handleStarUnlock(player, entityType, 3, xpToGive);
         }
 
         ModState.get(player.level().getServer()).setDirty();
@@ -205,7 +242,7 @@ public class MobKillHandler {
 
         player.level().playSound(null, player.blockPosition(),
                 net.minecraft.sounds.SoundEvents.UI_TOAST_CHALLENGE_COMPLETE,
-                net.minecraft.sounds.SoundSource.PLAYERS, 0.8F, 1.0F);
+                net.minecraft.sounds.SoundSource.PLAYERS, 1.0F, 1.0F);
 
         var prefix = net.minecraft.network.chat.Component.literal("[Bestiary] ").withStyle(net.minecraft.ChatFormatting.GOLD);
         var mobNameComp = entityType.getDescription().copy().withStyle(net.minecraft.ChatFormatting.YELLOW);
@@ -236,7 +273,7 @@ public class MobKillHandler {
 
                     EntityType<?> type = BuiltInRegistries.ENTITY_TYPE.get(Identifier.parse(entityId)).map(net.minecraft.core.Holder::value).orElse(null);
                     if (type != null) {
-                        List<Integer> thresholds = getKillThresholds(entityId, type.getCategory());
+                        List<Integer> thresholds = getProgressThresholds(entityId, type.getCategory());
                         if (!thresholds.isEmpty() && count >= thresholds.get(0)) {
                             gathered++;
                         }

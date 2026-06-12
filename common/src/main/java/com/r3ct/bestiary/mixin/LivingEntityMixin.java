@@ -1,6 +1,6 @@
 package com.r3ct.bestiary.mixin;
 
-import com.r3ct.bestiary.logic.MobKillHandler;
+import com.r3ct.bestiary.logic.MobProgressHandler;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.damagesource.DamageSource;
 import net.minecraft.world.entity.Entity;
@@ -23,7 +23,7 @@ public abstract class LivingEntityMixin extends Entity {
     private void onDie(DamageSource damageSource, CallbackInfo ci) {
         if (!this.level().isClientSide()) {
             if (damageSource.getEntity() instanceof ServerPlayer player) {
-                MobKillHandler.handleMobKill(player, this.getType());
+                MobProgressHandler.handleMobKill(player, this.getType());
             }
         }
     }
