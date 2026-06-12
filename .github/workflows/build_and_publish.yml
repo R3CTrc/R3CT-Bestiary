@@ -47,7 +47,7 @@ jobs:
         if: github.event_name == 'push'
         uses: actions/upload-artifact@v4
         with:
-          name: R3CT-Collection-Builds
+          name: R3CT-Bestiary-Builds
           path: |
             fabric/build/libs/*.jar
             neoforge/build/libs/*.jar
