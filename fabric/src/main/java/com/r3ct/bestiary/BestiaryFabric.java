@@ -26,10 +26,8 @@ public class BestiaryFabric implements ModInitializer {
     public void onInitialize() {
         BestiaryConfig.load();
 
-        // Zarejestrowanie tylko JEDNEGO, uniwersalnego trofeum
         registerTrophy("trophy", ModBlocks.TROPHY);
 
-        // Zaktualizowana nazwa ID dla BlockEntity
         Registry.register(BuiltInRegistries.BLOCK_ENTITY_TYPE, Identifier.parse(Constants.MOD_ID + ":trophy_be"), ModBlocks.TROPHY_BE_TYPE);
 
         ResourceKey<CreativeModeTab> TAB_KEY = ResourceKey.create(
@@ -41,7 +39,7 @@ public class BestiaryFabric implements ModInitializer {
                 .title(net.minecraft.network.chat.Component.translatable("itemGroup." + Constants.MOD_ID + ".main_tab"))
                 .icon(() -> new net.minecraft.world.item.ItemStack(ModBlocks.TROPHY))
                 .displayItems((context, output) -> {
-                    output.accept(ModBlocks.TROPHY); // Tylko jedno trofeum w zakładce
+                    output.accept(ModBlocks.TROPHY);
                 })
                 .build()
         );
@@ -74,7 +72,6 @@ public class BestiaryFabric implements ModInitializer {
                 if (player.level().isLoaded(payload.pos()) && player.distanceToSqr(net.minecraft.world.phys.Vec3.atCenterOf(payload.pos())) < 64.0) {
                     net.minecraft.world.level.block.entity.BlockEntity be = player.level().getBlockEntity(payload.pos());
                     if (be instanceof com.r3ct.bestiary.block.TrophyBlockEntity tbe) {
-                        // Usunięto .contains, by wymusić zaufanie do kliknięcia z GUI
                         tbe.setDisplayEntityId(payload.entityId());
                         player.level().playSound(null, payload.pos(), net.minecraft.sounds.SoundEvents.UI_BUTTON_CLICK.value(), net.minecraft.sounds.SoundSource.BLOCKS, 0.5f, 1.2f);
                     }

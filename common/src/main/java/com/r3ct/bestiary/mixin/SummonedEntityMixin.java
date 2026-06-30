@@ -18,7 +18,6 @@ public abstract class SummonedEntityMixin {
         String entityId = BuiltInRegistries.ENTITY_TYPE.getKey(entity.getType()).toString();
         String bestiaryCat = MobProgressHandler.getBestiaryCategory(entityId, entity.getType().getCategory());
 
-        // Zabezpieczenie: Bossy muszą być zabite w walce, samo zbudowanie (np. Withera) nie daje punktów
         if (!bestiaryCat.equals("bosses")) {
             MobProgressHandler.handleMobBuild(player, entity.getType());
         }

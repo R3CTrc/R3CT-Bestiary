@@ -20,13 +20,11 @@ public abstract class GoatMixin {
 
     @Unique private boolean r3ct_hadBucket = false;
 
-    // Sprawdzamy, czy gracz trzyma puste wiadro
     @Inject(method = "mobInteract", at = @At("HEAD"))
     private void r3ct_checkBucket(Player player, InteractionHand hand, CallbackInfoReturnable<InteractionResult> cir) {
         this.r3ct_hadBucket = player.getItemInHand(hand).is(Items.BUCKET);
     }
 
-    // Jeśli koza dała mleko
     @Inject(method = "mobInteract", at = @At("RETURN"))
     private void r3ct_onMilk(Player player, InteractionHand hand, CallbackInfoReturnable<InteractionResult> cir) {
         if (cir.getReturnValue().consumesAction() && player instanceof ServerPlayer serverPlayer && this.r3ct_hadBucket) {

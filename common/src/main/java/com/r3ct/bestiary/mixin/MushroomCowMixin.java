@@ -20,13 +20,11 @@ public abstract class MushroomCowMixin {
 
     @Unique private boolean r3ct_hadBowl = false;
 
-    // Sprawdzamy, czy gracz trzyma pustą miskę
     @Inject(method = "mobInteract", at = @At("HEAD"))
     private void r3ct_checkBowl(Player player, InteractionHand hand, CallbackInfoReturnable<InteractionResult> cir) {
         this.r3ct_hadBowl = player.getItemInHand(hand).is(Items.BOWL);
     }
 
-    // Jeśli gra zaakceptowała akcję (gracz otrzymał zupę)
     @Inject(method = "mobInteract", at = @At("RETURN"))
     private void r3ct_onStew(Player player, InteractionHand hand, CallbackInfoReturnable<InteractionResult> cir) {
         if (cir.getReturnValue().consumesAction() && player instanceof ServerPlayer serverPlayer && this.r3ct_hadBowl) {

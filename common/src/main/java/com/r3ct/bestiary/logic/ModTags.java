@@ -7,7 +7,6 @@ import net.minecraft.tags.TagKey;
 import net.minecraft.world.entity.EntityType;
 
 public class ModTags {
-    // Rejestracja naszych własnych, systemowych tagów
     public static final TagKey<EntityType<?>> ATTACK_EXPLOSIVE = create("attack_type/explosive");
     public static final TagKey<EntityType<?>> ATTACK_MAGIC = create("attack_type/magic");
     public static final TagKey<EntityType<?>> ATTACK_SONIC = create("attack_type/sonic");

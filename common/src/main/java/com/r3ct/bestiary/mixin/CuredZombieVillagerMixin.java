@@ -16,7 +16,6 @@ public abstract class CuredZombieVillagerMixin {
 
     @Inject(method = "trigger", at = @At("HEAD"))
     private void r3ct_onZombieCured(ServerPlayer player, Zombie zombie, Villager villager, CallbackInfo ci) {
-        // Gra traktuje wyleczonego jako Zombie Villagera tuż przed zamianą
         MobProgressHandler.handleMobCure(player, EntityType.ZOMBIE_VILLAGER);
     }
 }

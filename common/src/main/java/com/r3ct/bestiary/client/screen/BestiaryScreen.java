@@ -86,8 +86,6 @@ public class BestiaryScreen extends Screen {
                     Component.literal("DEV: Wymaksuj"),
                     btn -> {
                         if (!cachedCategories.isEmpty()) {
-                            // Zmienna selectedTabIndex zawsze przechowuje aktualnie otwartą zakładkę,
-                            // więc bierzemy z niej categoryId i wysyłamy do serwera.
                             String currentCategoryId = cachedCategories.get(selectedTabIndex).categoryId;
                             com.r3ct.bestiary.platform.Services.PLATFORM.sendDebugCompleteCategoryPacket(currentCategoryId);
                         }
@@ -715,7 +713,6 @@ public class BestiaryScreen extends Screen {
         int totalPages = (isCollected ? 1 : 0) + starLevel;
         int centerX = bookX + (RENDER_SIZE / 2);
 
-        // ==== GÓRA: WYCENTROWANY MODEL 3D ====
         int boxX0 = centerX - 60;
         int boxY0 = bookY + 20;
         int boxX1 = centerX + 60;
@@ -740,7 +737,6 @@ public class BestiaryScreen extends Screen {
             guiGraphics.pose().popMatrix();
         }
 
-        // ==== POD MODELEM: NAZWA I POSTĘP ====
         Component title = type.getDescription();
         guiGraphics.text(this.font, title, centerX - (this.font.width(title) / 2), bookY + 105, 0xFF000000, false);
 
@@ -762,7 +758,6 @@ public class BestiaryScreen extends Screen {
         guiGraphics.item(new ItemStack(Items.MOJANG_BANNER_PATTERN), 0, 0);
         guiGraphics.pose().popMatrix();
 
-        // ==== DÓŁ: SCROLLOWANE STATYSTYKI ====
         int textX = bookX + 50;
         int listStartY = bookY + 135;
         int listHeight = 80;
@@ -784,7 +779,6 @@ public class BestiaryScreen extends Screen {
 
         int currentY = listStartY;
 
-        // 1. ZALICZENIE
         Component infoTitle = Component.translatable("gui.r3ct_bestiary.details.general_info").withStyle(ChatFormatting.BOLD, ChatFormatting.DARK_GRAY);
         guiGraphics.text(this.font, infoTitle, textX, currentY, 0xFFFFFFFF, false); currentY += 12;
 
@@ -809,7 +803,6 @@ public class BestiaryScreen extends Screen {
         }
         currentY += 16;
 
-        // 2. PIERWSZA GWIAZDKA
         Component bodyTitle = Component.translatable("gui.r3ct_bestiary.details.body_structure").withStyle(ChatFormatting.BOLD, ChatFormatting.DARK_GRAY);
         guiGraphics.text(this.font, bodyTitle, textX, currentY, 0xFFFFFFFF, false); currentY += 12;
 
@@ -840,57 +833,44 @@ public class BestiaryScreen extends Screen {
         }
         currentY += 16;
 
-        // 3. DRUGA GWIAZDKA
         Component habitsTitle = Component.translatable("gui.r3ct_bestiary.details.habits_and_attack").withStyle(net.minecraft.ChatFormatting.BOLD, net.minecraft.ChatFormatting.DARK_GRAY);
         guiGraphics.text(this.font, habitsTitle, textX, currentY, 0xFFFFFFFF, false); currentY += 12;
 
         if (totalPages >= 3 && dummy != null) {
             Component dmgVal = Component.translatable("gui.r3ct_bestiary.details.none");
 
-            // 1. Odczytujemy dokładny bazowy atak (skaluje się z każdym modowanym mieczem czy siłą)
             var dmgAttr = dummy.getAttribute(net.minecraft.world.entity.ai.attributes.Attributes.ATTACK_DAMAGE);
             double rawDamage = (dmgAttr != null) ? dmgAttr.getValue() : 0.0;
 
-            // 2. Pobieramy informacje o tagach z nowego systemu
             var holder = type.builtInRegistryHolder();
 
-            // 3. Badamy broń (wyłapie modowane pistolety, łuki, włócznie dziedziczące po ProjectileWeaponItem)
             ItemStack mainHand = dummy.getMainHandItem();
             ItemStack offHand = dummy.getOffhandItem();
             boolean hasRangedWeaponMain = mainHand.getItem() instanceof net.minecraft.world.item.ProjectileWeaponItem || mainHand.is(Items.TRIDENT);
             boolean hasRangedWeaponOff = offHand.getItem() instanceof net.minecraft.world.item.ProjectileWeaponItem || offHand.is(Items.TRIDENT);
 
-            // 4. Kaskadowa logika przypisywania!
             if (holder.is(com.r3ct.bestiary.logic.ModTags.ATTACK_EXPLOSIVE)) {
-                // Datapack powiedział, że to mob wybuchowy
                 dmgVal = Component.translatable("gui.r3ct_bestiary.details.explosion");
 
             } else if (holder.is(com.r3ct.bestiary.logic.ModTags.ATTACK_SONIC)) {
-                // Warden i inni krzykacze z modów - łączymy dynamiczny melee z dopiskiem Sonic
                 dmgVal = Component.literal(Math.round(rawDamage) + " ⚔").append(Component.translatable("gui.r3ct_bestiary.details.sonic_boom"));
 
             } else if (holder.is(com.r3ct.bestiary.logic.ModTags.ATTACK_MAGIC) || dummy instanceof net.minecraft.world.entity.monster.illager.SpellcasterIllager) {
-                // Datapack mówi "Magia" LUB implementuje interfejs rzucania czarów (nawet jeśli to nowy illager z moda)
                 dmgVal = Component.translatable("gui.r3ct_bestiary.details.magic");
 
             } else if (hasRangedWeaponMain) {
-                // Wyciąga nazwę broni z głównej ręki (zostaje ikonka łuku, podmienia nazwę)
                 dmgVal = Component.literal("🏹 ").append(mainHand.getHoverName());
 
             } else if (hasRangedWeaponOff) {
-                // Wyciąga nazwę broni z lewej ręki
                 dmgVal = Component.literal("🏹 ").append(offHand.getHoverName());
 
             } else if (dummy instanceof net.minecraft.world.entity.monster.RangedAttackMob) {
-                // Plujące moby bez broni w ręku (Śnieżny Golem, Lama z Vanilla i modów)
                 dmgVal = Component.translatable("gui.r3ct_bestiary.details.ranged");
 
             } else if (rawDamage > 0) {
-                // Mob walczy wręcz i ma zadawać obrażenia (Czysta, dokładna wartość!)
                 dmgVal = Component.literal(Math.round(rawDamage) + " ⚔");
             }
 
-            // --- Zasięg i prędkość pozostają niezmienione ---
             Component rangeVal = Component.translatable("gui.r3ct_bestiary.details.none");
             var rangeAttr = dummy.getAttribute(net.minecraft.world.entity.ai.attributes.Attributes.FOLLOW_RANGE);
             if (rangeAttr != null) {
@@ -903,7 +883,6 @@ public class BestiaryScreen extends Screen {
                 speedVal = Component.translatable("gui.r3ct_bestiary.details.blocks_per_sec", String.format(java.util.Locale.US, "%.1f", speedAttr.getValue() * 10.0));
             }
 
-            // Rysowanie z kopiami by uniknąć crashy
             Component dmgComp = Component.translatable("gui.r3ct_bestiary.details.damage").withStyle(net.minecraft.ChatFormatting.GRAY).append(dmgVal.copy().withStyle(net.minecraft.ChatFormatting.RED));
             guiGraphics.text(this.font, dmgComp, textX, currentY, 0xFFFFFFFF, false); currentY += 10;
 
@@ -923,7 +902,6 @@ public class BestiaryScreen extends Screen {
         }
         currentY += 16;
 
-        // 4. TRZECIA GWIAZDKA
         Component resistTitle = Component.translatable("gui.r3ct_bestiary.details.resistances").withStyle(ChatFormatting.BOLD, ChatFormatting.DARK_GRAY);
         guiGraphics.text(this.font, resistTitle, textX, currentY, 0xFFFFFFFF, false); currentY += 12;
 

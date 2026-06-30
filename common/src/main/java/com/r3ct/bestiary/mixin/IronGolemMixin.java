@@ -20,13 +20,11 @@ public abstract class IronGolemMixin {
 
     @Unique private boolean r3ct_hadIronIngot = false;
 
-    // Sprawdzamy, czy gracz chce użyć sztabki żelaza
     @Inject(method = "mobInteract", at = @At("HEAD"))
     private void r3ct_checkIron(Player player, InteractionHand hand, CallbackInfoReturnable<InteractionResult> cir) {
         this.r3ct_hadIronIngot = player.getItemInHand(hand).is(Items.IRON_INGOT);
     }
 
-    // consumsAction() gwarantuje, że Golem faktycznie został uleczony (a nie że miał już max HP)
     @Inject(method = "mobInteract", at = @At("RETURN"))
     private void r3ct_onRepair(Player player, InteractionHand hand, CallbackInfoReturnable<InteractionResult> cir) {
         if (cir.getReturnValue().consumesAction() && player instanceof ServerPlayer serverPlayer && this.r3ct_hadIronIngot) {

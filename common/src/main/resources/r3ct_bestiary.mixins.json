@@ -13,6 +13,7 @@
     "CuredZombieVillagerMixin",
     "DolphinMixin",
     "GoatMixin",
+    "GuiGraphicsMixin",
     "IronGolemMixin",
     "LivingEntityMixin",
     "MobCooldownMixin",

@@ -36,24 +36,20 @@ public class TrophyScreen extends Screen {
         int startIndex = page * itemsPerPage;
         int endIndex = Math.min(startIndex + itemsPerPage, list.size());
 
-        // Generujemy po kolei ładne przyciski z nazwami mobów (wziętymi z tłumaczeń gry)
         for (int i = startIndex; i < endIndex; i++) {
             String entityId = list.get(i);
             Component entityName = BuiltInRegistries.ENTITY_TYPE.get(Identifier.parse(entityId))
-                    // ZMIANA TUTAJ: Wyciągamy wartość z holdera przez holder.value()
                     .map(holder -> holder.value().getDescription())
                     .orElse(Component.literal(entityId));
 
             int yOffset = startY + ((i - startIndex) * (buttonHeight + 4));
 
             this.addRenderableWidget(Button.builder(entityName, btn -> {
-                // Wysyłamy pakiet do serwera po kliknięciu i zamykamy menu
                 Services.PLATFORM.sendSetTrophyEntityPacket(trophyBE.getBlockPos(), entityId);
                 this.onClose();
             }).bounds(this.width / 2 - buttonWidth / 2, yOffset, buttonWidth, buttonHeight).build());
         }
 
-        // Paginacja (Kolejne strony, jeśli kategoria ma więcej niż 10 mobów)
         if (maxPages > 1) {
             int navY = startY + (itemsPerPage * (buttonHeight + 4)) + 10;
 

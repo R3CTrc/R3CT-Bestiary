@@ -57,7 +57,7 @@ public class TrophyBlockEntity extends BlockEntity {
 
     public void setDisplayEntityId(String entityId) {
         this.displayEntityId = entityId;
-        this.displayEntityCache = null; // Resetujemy cache
+        this.displayEntityCache = null;
         this.setChanged();
         syncToClient();
     }
@@ -140,7 +140,7 @@ public class TrophyBlockEntity extends BlockEntity {
         input.getString("DisplayEntity").ifPresent(id -> {
             if (!this.displayEntityId.equals(id)) {
                 this.displayEntityId = id;
-                this.displayEntityCache = null; // KLUCZOWE: Resetujemy cache na kliencie!
+                this.displayEntityCache = null;
             }
         });
         input.getString("OwnerName").ifPresent(name -> this.ownerName = name);
@@ -161,16 +161,14 @@ public class TrophyBlockEntity extends BlockEntity {
             CompoundTag tag = customData.copyTag();
 
             if (tag.contains("DisplayEntity")) {
-                // ROZWIĄZANIE: dodanie .orElse("")
                 String newId = tag.getString("DisplayEntity").orElse("");
                 if (!this.displayEntityId.equals(newId)) {
                     this.displayEntityId = newId;
-                    this.displayEntityCache = null; // KLUCZOWE
+                    this.displayEntityCache = null;
                 }
             }
 
             if (tag.contains("OwnerName")) {
-                // ROZWIĄZANIE: dodanie .orElse("")
                 this.ownerName = tag.getString("OwnerName").orElse("");
             }
 
@@ -218,7 +216,6 @@ public class TrophyBlockEntity extends BlockEntity {
         }
     }
 
-    // GWARANCJA SYNCHRONIZACJI Z KLIENTEM (omija ValueOutput)
     @Override
     public CompoundTag getUpdateTag(HolderLookup.Provider registries) {
         CompoundTag tag = super.getUpdateTag(registries);

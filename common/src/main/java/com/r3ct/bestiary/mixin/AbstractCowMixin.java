@@ -31,7 +31,6 @@ public abstract class AbstractCowMixin {
 
             long cooldownMs = (long) com.r3ct.bestiary.config.BestiaryConfig.interactionCooldownMinutes * 60 * 1000L;
             if (MobProgressHandler.tryApplyCooldown(cow, cooldownMs)) {
-                // Używamy cow.getType(), dzięki czemu dynamicznie przyzna punkt dla Krowy LUB Mooshrooma!
                 MobProgressHandler.handleMobInteract(serverPlayer, cow.getType());
             }
         }

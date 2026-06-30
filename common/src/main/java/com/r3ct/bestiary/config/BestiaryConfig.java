@@ -32,7 +32,6 @@ public class BestiaryConfig {
 
     public static float catalogScale = 1.0f;
 
-    // NOWOŚĆ: Pule nagród XP zamienione na Listy [Baza, ★, ★★, ★★★]
     public static List<Integer> xpBosses = Arrays.asList(500, 1500, 3000, 5000);
     public static List<Integer> xpMonsters = Arrays.asList(100, 500, 1500, 3000);
     public static List<Integer> xpCreatures = Arrays.asList(50, 250, 1000, 2000);

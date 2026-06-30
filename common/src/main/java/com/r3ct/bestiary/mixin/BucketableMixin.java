@@ -14,7 +14,6 @@ import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 
-// Stosujemy do każdego moba z interfejsem Bucketable
 @Mixin(Mob.class)
 public abstract class BucketableMixin {
 
@@ -35,8 +34,6 @@ public abstract class BucketableMixin {
         Object self = this;
         if (self instanceof Bucketable && cir.getReturnValue().consumesAction() && player instanceof ServerPlayer serverPlayer) {
             if (this.r3ct_hadWaterBucket && this.r3ct_wasWild) {
-                // Nie dajemy cooldownu, bo mob znika w wiadrze.
-                // Używamy ((Mob) self).getType(), żeby prawidłowo złapać typ (np. Aksolotl vs Ryba)
                 MobProgressHandler.handleMobInteract(serverPlayer, ((Mob) self).getType());
             }
         }

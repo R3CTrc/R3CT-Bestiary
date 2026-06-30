@@ -118,7 +118,6 @@ public class BestiaryNeoForge {
             )));
         };
 
-        // Zarejestrowanie tylko JEDNEGO, uniwersalnego trofeum
         registerTrophy.accept("trophy", ModBlocks.TROPHY);
 
         event.register(BuiltInRegistries.BLOCK_ENTITY_TYPE.key(), helper -> {
@@ -131,7 +130,7 @@ public class BestiaryNeoForge {
                             .title(net.minecraft.network.chat.Component.translatable("itemGroup." + Constants.MOD_ID + ".main_tab"))
                             .icon(() -> new net.minecraft.world.item.ItemStack(ModBlocks.TROPHY))
                             .displayItems((context, output) -> {
-                                output.accept(ModBlocks.TROPHY); // Tylko jedno trofeum w zakładce
+                                output.accept(ModBlocks.TROPHY);
                             })
                             .build()
             );

@@ -18,7 +18,6 @@ public abstract class BredAnimalsMixin {
         Animal animal = (Animal) (Object) this;
         ServerPlayer player = animal.getLoveCause();
 
-        // Dodatkowe zabezpieczenie: jeśli pierwszy rodzic zgubił gracza, pytamy drugiego
         if (player == null && mate != null) {
             player = mate.getLoveCause();
         }
@@ -26,7 +25,6 @@ public abstract class BredAnimalsMixin {
         if (player != null) {
             EntityType<?> targetType = animal.getType();
 
-            // Specjalny przypadek: Koń + Osioł = Muł
             if ((animal.getType() == EntityType.HORSE && mate.getType() == EntityType.DONKEY) ||
                     (animal.getType() == EntityType.DONKEY && mate.getType() == EntityType.HORSE)) {
                 targetType = EntityType.MULE;

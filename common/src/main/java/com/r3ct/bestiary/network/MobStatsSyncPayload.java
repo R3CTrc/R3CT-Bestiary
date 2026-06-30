@@ -14,7 +14,6 @@ public record MobStatsSyncPayload(Map<String, MobBaseStats> statsMap) implements
 
     public static final StreamCodec<RegistryFriendlyByteBuf, MobStatsSyncPayload> STREAM_CODEC =
             ByteBufCodecs.map(HashMap::new, ByteBufCodecs.STRING_UTF8, MobBaseStats.STREAM_CODEC)
-                    // ZMIANA: Bezpieczne pakowanie z powrotem do HashMap dla systemu serializacji
                     .map(MobStatsSyncPayload::new, payload -> new HashMap<>(payload.statsMap()));
 
     @Override

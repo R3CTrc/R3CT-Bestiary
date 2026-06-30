@@ -27,7 +27,6 @@ public class TrophyBlockEntityRenderer implements BlockEntityRenderer<TrophyBloc
     private final Font font;
 
     public TrophyBlockEntityRenderer(BlockEntityRendererProvider.Context context) {
-        // Zmieniono z context.entityRenderDispatcher() na poprawny akcesor rekordu: context.entityRenderer()
         this.entityRenderer = context.entityRenderer();
         this.font = context.font();
     }
@@ -53,18 +52,31 @@ public class TrophyBlockEntityRenderer implements BlockEntityRenderer<TrophyBloc
 
         state.time = (blockEntity.getLevel() != null ? blockEntity.getLevel().getGameTime() : 0) + partialTicks;
 
-        // --- ZGODNIE Z 1.21.X: EKSTRAKCJA STANU MOBA W ODPOWIEDNIM WĄTKU ---
         Entity displayEntity = blockEntity.getOrCreateDisplayEntity();
         if (displayEntity != null) {
-            // Obliczamy odpowiednie skalowanie
+
+            net.minecraft.core.BlockPos pos = blockEntity.getBlockPos();
+            displayEntity.setPos(pos.getX() + 0.5D, pos.getY() + 0.5D, pos.getZ() + 0.5D);
+
+            displayEntity.xOld = displayEntity.getX();
+            displayEntity.yOld = displayEntity.getY();
+            displayEntity.zOld = displayEntity.getZ();
+
+            displayEntity.tickCount = (int) (blockEntity.getLevel().getGameTime() % 10000);
+
             float maxDimension = Math.max(displayEntity.getBbWidth(), displayEntity.getBbHeight());
-            state.entityScale = 0.35F;
-            if (maxDimension > 0.8F) {
-                state.entityScale = 0.35F / (maxDimension / 0.8F);
+            if (maxDimension <= 0.01F) maxDimension = 1.0F;
+
+            float targetSize = 0.35F * (float) Math.pow(maxDimension, 0.4);
+            state.entityScale = targetSize / maxDimension;
+
+            state.entityRenderState = this.entityRenderer.extractEntity(displayEntity, partialTicks);
+
+            if (state.entityRenderState != null) {
+                state.entityRenderState.shadowRadius = 0.0F;
+                state.entityRenderState.shadowPieces.clear();
             }
 
-            // Konwersja fizycznej encji na lekki EntityRenderState dla SubmitNodeCollector'a
-            state.entityRenderState = this.entityRenderer.extractEntity(displayEntity, 0.0F);
         } else {
             state.entityRenderState = null;
         }
@@ -82,27 +94,21 @@ public class TrophyBlockEntityRenderer implements BlockEntityRenderer<TrophyBloc
             poseStack.translate(0.0D, 0.0D, -0.3125D);
         }
 
-        // RENDEROWANIE TRÓJWYMIAROWEGO MOBA
         if (state.entityRenderState != null) {
             poseStack.pushPose();
 
             float offset = (float) Math.sin(state.time / 10.0F) * 0.05F;
             float spin = state.time * 3.0F;
 
-            // Moby opieramy niżej na trofeum (0.25D)
             poseStack.translate(0.0D, 0.25D + offset, 0.0D);
             poseStack.mulPose(Axis.YP.rotationDegrees(spin));
-
-            // Nakładamy wyliczoną wcześnie skalę
             poseStack.scale(state.entityScale, state.entityScale, state.entityScale);
 
-            // Nowy system wywoływania renderowania z użyciem wyekstrahowanego stanu!
             this.entityRenderer.submit(state.entityRenderState, camera, 0.0D, 0.0D, 0.0D, poseStack, submitNodeCollector);
 
             poseStack.popPose();
         }
 
-        // RENDEROWANIE NICKU WŁAŚCICIELA
         if (state.customName != null) {
             FormattedCharSequence formattedText = state.customName.getVisualOrderText();
             float textWidth = this.font.width(formattedText);
@@ -130,7 +136,6 @@ public class TrophyBlockEntityRenderer implements BlockEntityRenderer<TrophyBloc
         public Direction facing = Direction.NORTH;
         public boolean isWall = false;
 
-        // Zapisujemy wygenerowany Stan Encji (1.21.x) i jej docelową skalę
         public EntityRenderState entityRenderState = null;
         public float entityScale = 0.35F;
 

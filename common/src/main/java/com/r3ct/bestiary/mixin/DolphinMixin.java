@@ -21,14 +21,12 @@ public abstract class DolphinMixin {
 
     @Unique private boolean r3ct_hadFish = false;
 
-    // Sprawdzamy, czy gracz chce nakarmić delfina surowym dorszem lub łososiem
     @Inject(method = "mobInteract", at = @At("HEAD"))
     private void r3ct_checkFish(Player player, InteractionHand hand, CallbackInfoReturnable<InteractionResult> cir) {
         ItemStack item = player.getItemInHand(hand);
         this.r3ct_hadFish = item.is(Items.COD) || item.is(Items.SALMON);
     }
 
-    // Jeśli delfin zjadł rybę
     @Inject(method = "mobInteract", at = @At("RETURN"))
     private void r3ct_onFeed(Player player, InteractionHand hand, CallbackInfoReturnable<InteractionResult> cir) {
         if (cir.getReturnValue().consumesAction() && player instanceof ServerPlayer serverPlayer && this.r3ct_hadFish) {
@@ -36,7 +34,6 @@ public abstract class DolphinMixin {
             Dolphin dolphin = (Dolphin) (Object) this;
             long cooldownMs = (long) BestiaryConfig.interactionCooldownMinutes * 60 * 1000L;
 
-            // Nakładamy cooldown korzystając ze wspólnego interfejsu
             if (MobProgressHandler.tryApplyCooldown(dolphin, cooldownMs)) {
                 MobProgressHandler.handleMobInteract(serverPlayer, EntityType.DOLPHIN);
             }

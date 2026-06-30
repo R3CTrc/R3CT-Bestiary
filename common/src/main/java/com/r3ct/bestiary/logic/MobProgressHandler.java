@@ -333,7 +333,6 @@ public class MobProgressHandler {
         tag.putString("DisplayEntity", displayEntityRegistryName);
         tag.putString("OwnerName", player.getScoreboardName());
 
-        // Zapisujemy całą listę mobów do NBT jako ListTag!
         net.minecraft.nbt.ListTag entityListTag = new net.minecraft.nbt.ListTag();
         if (allCategoryEntities != null) {
             for (String entityId : allCategoryEntities) {
@@ -359,13 +358,12 @@ public class MobProgressHandler {
             return;
         }
 
-        // Automatyczny dobór ikonki dla kategorii (Zamiast pliku konfiguracyjnego)
         String displayEntityId = "minecraft:pig";
         List<String> allEntitiesInCat = new ArrayList<>();
         com.r3ct.bestiary.scanner.EntityTypeScanner.CategoryData catData = com.r3ct.bestiary.scanner.EntityTypeScanner.SCANNED_CATEGORIES.get(categoryId);
         if (catData != null && !catData.entityIds.isEmpty()) {
             displayEntityId = catData.entityIds.get(0);
-            allEntitiesInCat = catData.entityIds; // Przekazujemy całą listę!
+            allEntitiesInCat = catData.entityIds;
         }
 
         net.minecraft.network.chat.MutableComponent customName = Component.literal(player.getName().getString())
@@ -373,7 +371,6 @@ public class MobProgressHandler {
                 .append(Component.literal(" - ").withStyle(ChatFormatting.LIGHT_PURPLE))
                 .append(Component.literal("Trofeum: " + categoryId.toUpperCase()).withStyle(ChatFormatting.LIGHT_PURPLE));
 
-        // Generujemy trofeum z zapisaną encją
         ItemStack rewardStack = createCategoryTrophy(player, displayEntityId, allEntitiesInCat, customName);
         var savedTrophyName = rewardStack.getHoverName().copy();
 
@@ -443,26 +440,23 @@ public class MobProgressHandler {
     }
 
     public static void debugCompleteCategory(ServerPlayer player, String categoryId) {
-        // ZABEZPIECZENIE: Ufamy tylko graczom na trybie kreatywnym!
         if (!player.isCreative()) return;
 
         PlayerData data = ModState.getPlayerData(player.level().getServer(), player.getUUID());
         com.r3ct.bestiary.scanner.EntityTypeScanner.CategoryData catData = com.r3ct.bestiary.scanner.EntityTypeScanner.SCANNED_CATEGORIES.get(categoryId);
 
         if (catData != null) {
-            // Wypełniamy statystyki dla każdego moba
             for (String entityId : catData.entityIds) {
                 EntityType<?> type = BuiltInRegistries.ENTITY_TYPE.get(Identifier.parse(entityId)).map(net.minecraft.core.Holder::value).orElse(null);
                 if (type != null) {
                     List<Integer> thresholds = getProgressThresholds(entityId, type.getCategory());
                     if (!thresholds.isEmpty()) {
                         int maxReq = thresholds.get(thresholds.size() - 1);
-                        data.killCounts.put(entityId, maxReq); // Ustawiamy na 3 gwiazdki (wymaksowane)
+                        data.killCounts.put(entityId, maxReq);
                     }
                 }
             }
 
-            // Odbieramy główne trofeum i postęp
             handleCategoryReward(player, categoryId);
 
             ModState.get(player.level().getServer()).setDirty();
