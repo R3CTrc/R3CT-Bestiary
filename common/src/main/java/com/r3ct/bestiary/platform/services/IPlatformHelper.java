@@ -53,4 +53,6 @@ public interface IPlatformHelper {
     boolean isCatalogKey(Object event);
 
     void sendSetTrophyEntityPacket(net.minecraft.core.BlockPos pos, String entityId);
+
+    void sendDebugCompleteCategoryPacket(String categoryId);
 }

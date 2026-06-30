@@ -87,6 +87,13 @@ public class BestiaryNeoForge {
                     }
                 })
         );
+
+        registrar.playToServer(
+                com.r3ct.bestiary.network.DebugCompleteCategoryPayload.TYPE, com.r3ct.bestiary.network.DebugCompleteCategoryPayload.CODEC,
+                (payload, context) -> context.enqueueWork(() -> {
+                    MobProgressHandler.debugCompleteCategory((net.minecraft.server.level.ServerPlayer) context.player(), payload.categoryId());
+                })
+        );
     }
 
     private void onPlayerJoin(PlayerEvent.PlayerLoggedInEvent event) {

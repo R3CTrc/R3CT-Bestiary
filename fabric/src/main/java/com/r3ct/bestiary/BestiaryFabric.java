@@ -52,6 +52,7 @@ public class BestiaryFabric implements ModInitializer {
         PayloadTypeRegistry.clientboundPlay().register(com.r3ct.bestiary.network.MobStatsSyncPayload.TYPE, com.r3ct.bestiary.network.MobStatsSyncPayload.STREAM_CODEC);
         PayloadTypeRegistry.clientboundPlay().register(com.r3ct.bestiary.network.ConfigSyncPayload.TYPE, com.r3ct.bestiary.network.ConfigSyncPayload.CODEC);
         PayloadTypeRegistry.serverboundPlay().register(com.r3ct.bestiary.network.SetTrophyEntityPayload.TYPE, com.r3ct.bestiary.network.SetTrophyEntityPayload.CODEC);
+        PayloadTypeRegistry.serverboundPlay().register(com.r3ct.bestiary.network.DebugCompleteCategoryPayload.TYPE, com.r3ct.bestiary.network.DebugCompleteCategoryPayload.CODEC);
 
         ServerPlayConnectionEvents.JOIN.register((handler, sender, server) -> {
             com.r3ct.bestiary.data.PlayerData data = com.r3ct.bestiary.data.ModState.getPlayerData(server, handler.player.getUUID());
@@ -80,6 +81,12 @@ public class BestiaryFabric implements ModInitializer {
                         }
                     }
                 }
+            });
+        });
+
+        ServerPlayNetworking.registerGlobalReceiver(com.r3ct.bestiary.network.DebugCompleteCategoryPayload.TYPE, (payload, context) -> {
+            context.server().execute(() -> {
+                MobProgressHandler.debugCompleteCategory(context.player(), payload.categoryId());
             });
         });
     }

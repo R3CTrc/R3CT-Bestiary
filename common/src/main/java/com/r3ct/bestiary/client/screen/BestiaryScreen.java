@@ -80,6 +80,20 @@ public class BestiaryScreen extends Screen {
         }
 
         com.r3ct.bestiary.platform.Services.PLATFORM.sendRequestLeaderboardPacketToServer();
+
+        if (this.minecraft != null && this.minecraft.player != null && this.minecraft.player.isCreative()) {
+            this.addRenderableWidget(net.minecraft.client.gui.components.Button.builder(
+                    Component.literal("DEV: Wymaksuj"),
+                    btn -> {
+                        if (!cachedCategories.isEmpty()) {
+                            // Zmienna selectedTabIndex zawsze przechowuje aktualnie otwartą zakładkę,
+                            // więc bierzemy z niej categoryId i wysyłamy do serwera.
+                            String currentCategoryId = cachedCategories.get(selectedTabIndex).categoryId;
+                            com.r3ct.bestiary.platform.Services.PLATFORM.sendDebugCompleteCategoryPacket(currentCategoryId);
+                        }
+                    }
+            ).bounds(10, 10, 100, 20).build());
+        }
     }
 
     private boolean isCompleted(String entityId) {

@@ -441,4 +441,34 @@ public class MobProgressHandler {
         }
         return false;
     }
+
+    public static void debugCompleteCategory(ServerPlayer player, String categoryId) {
+        // ZABEZPIECZENIE: Ufamy tylko graczom na trybie kreatywnym!
+        if (!player.isCreative()) return;
+
+        PlayerData data = ModState.getPlayerData(player.level().getServer(), player.getUUID());
+        com.r3ct.bestiary.scanner.EntityTypeScanner.CategoryData catData = com.r3ct.bestiary.scanner.EntityTypeScanner.SCANNED_CATEGORIES.get(categoryId);
+
+        if (catData != null) {
+            // Wypełniamy statystyki dla każdego moba
+            for (String entityId : catData.entityIds) {
+                EntityType<?> type = BuiltInRegistries.ENTITY_TYPE.get(Identifier.parse(entityId)).map(net.minecraft.core.Holder::value).orElse(null);
+                if (type != null) {
+                    List<Integer> thresholds = getProgressThresholds(entityId, type.getCategory());
+                    if (!thresholds.isEmpty()) {
+                        int maxReq = thresholds.get(thresholds.size() - 1);
+                        data.killCounts.put(entityId, maxReq); // Ustawiamy na 3 gwiazdki (wymaksowane)
+                    }
+                }
+            }
+
+            // Odbieramy główne trofeum i postęp
+            handleCategoryReward(player, categoryId);
+
+            ModState.get(player.level().getServer()).setDirty();
+            Services.PLATFORM.sendSyncDataPacketToClient(player, data.killCounts, data.rewardedCategories);
+
+            player.sendSystemMessage(Component.literal("§d[DEV] Kategoria " + categoryId + " została wymaksowana!"));
+        }
+    }
 }
