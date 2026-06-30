@@ -2,6 +2,17 @@
   "_comment_version": "Do not change the version number! It is used for automatic config updates.",
   "version": 1,
 
+  "_comment_INFO_1": "=========================================================================",
+  "_comment_INFO_2": " CHANCES: The 'chance' field works proportionally. For the best experience,",
+  "_comment_INFO_3": " make sure the sum of all chances in a single group [ ] equals exactly 100.",
+  "_comment_INFO_4": " If they don't sum to 100, the mod will still safely calculate the odds,",
+  "_comment_INFO_5": " but the actual drop percentages will differ from the written values.",
+  "_comment_INFO_6": "=========================================================================",
+
+  "_comment_INFO_7": "=========================================================================",
+  "_comment_INFO_8": " COLORS: You can use standard Minecraft color codes with the '&' symbol.",
+  "_comment_INFO_9": "=========================================================================",
+
   "_comment_xp": "Experience points rewarded when fully researching a mob: [Base (Checkmark), Star 1, Star 2, Star 3].",
   "xpBosses": [500, 1500, 3000, 5000],
   "xpMonsters": [100, 500, 1500, 3000],

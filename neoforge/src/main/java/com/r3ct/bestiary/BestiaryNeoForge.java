@@ -65,6 +65,13 @@ public class BestiaryNeoForge {
                     ClientPlayerData.serverMobStats = payload.statsMap();
                 })
         );
+
+        registrar.playToClient(
+                com.r3ct.bestiary.network.ConfigSyncPayload.TYPE, com.r3ct.bestiary.network.ConfigSyncPayload.CODEC,
+                (payload, context) -> context.enqueueWork(() -> {
+                    BestiaryConfig.syncFromServer(payload.mobsJson(), payload.rewardsJson());
+                })
+        );
     }
 
     private void onPlayerJoin(PlayerEvent.PlayerLoggedInEvent event) {
@@ -73,6 +80,9 @@ public class BestiaryNeoForge {
             com.r3ct.bestiary.platform.Services.PLATFORM.sendSyncDataPacketToClient(serverPlayer, data.killCounts, data.rewardedCategories);
             var statsMap = com.r3ct.bestiary.scanner.ServerMobScanner.getServerMobStats(serverPlayer.level());
             net.neoforged.neoforge.network.PacketDistributor.sendToPlayer(serverPlayer, new com.r3ct.bestiary.network.MobStatsSyncPayload(statsMap));
+            String mobsJson = BestiaryConfig.getMobsConfigAsString();
+            String rewardsJson = BestiaryConfig.getRewardsConfigAsString();
+            net.neoforged.neoforge.network.PacketDistributor.sendToPlayer(serverPlayer, new com.r3ct.bestiary.network.ConfigSyncPayload(mobsJson, rewardsJson));
         }
     }
 

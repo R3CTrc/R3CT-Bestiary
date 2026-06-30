@@ -50,5 +50,16 @@ public class BestiaryClientFabric implements ClientModInitializer {
                     ClientPlayerData.serverMobStats = payload.statsMap();
                 })
         );
+
+        net.fabricmc.fabric.api.client.networking.v1.ClientPlayNetworking.registerGlobalReceiver(
+                com.r3ct.bestiary.network.ConfigSyncPayload.TYPE,
+                (payload, context) -> context.client().execute(() -> {
+                    com.r3ct.bestiary.config.BestiaryConfig.syncFromServer(payload.mobsJson(), payload.rewardsJson());
+                })
+        );
+
+        net.fabricmc.fabric.api.client.networking.v1.ClientPlayConnectionEvents.DISCONNECT.register((handler, client) -> {
+            com.r3ct.bestiary.config.BestiaryConfig.load();
+        });
     }
 }

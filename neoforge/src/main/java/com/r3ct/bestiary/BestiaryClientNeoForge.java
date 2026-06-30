@@ -47,5 +47,10 @@ public class BestiaryClientNeoForge {
         public static void onClientTick(ClientTickEvent.Post event) {
             KeyMappings.handleKeyInput();
         }
+
+        @SubscribeEvent
+        public static void onClientLogout(net.neoforged.neoforge.client.event.ClientPlayerNetworkEvent.LoggingOut event) {
+            com.r3ct.bestiary.config.BestiaryConfig.load();
+        }
     }
 }

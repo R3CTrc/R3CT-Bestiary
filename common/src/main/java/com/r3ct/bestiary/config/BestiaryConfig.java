@@ -228,4 +228,47 @@ public class BestiaryConfig {
         }
         return null;
     }
+
+    public static String getMobsConfigAsString() {
+        try { return Files.readString(MOBS_PATH); }
+        catch (IOException e) { return "{}"; }
+    }
+
+    public static String getRewardsConfigAsString() {
+        try { return Files.readString(REWARDS_PATH); }
+        catch (IOException e) { return "{}"; }
+    }
+
+    public static void syncFromServer(String mobsJson, String rewardsJson) {
+        try {
+            MobsData mobsData = GSON.fromJson(mobsJson, MobsData.class);
+            if (mobsData != null) {
+                if (mobsData.blacklistedMods != null) blacklistedMods = mobsData.blacklistedMods;
+                if (mobsData.blacklistedCategories != null) blacklistedCategories = mobsData.blacklistedCategories;
+                if (mobsData.blacklistedMobs != null) blacklistedMobs = mobsData.blacklistedMobs;
+                if (mobsData.modCategoryOverrides != null) modCategoryOverrides = mobsData.modCategoryOverrides;
+                if (mobsData.mobCategoryOverrides != null) mobCategoryOverrides = mobsData.mobCategoryOverrides;
+                if (mobsData.defaultProgressBosses != null && !mobsData.defaultProgressBosses.isEmpty()) defaultProgressBosses = mobsData.defaultProgressBosses;
+                if (mobsData.defaultProgressMonsters != null && !mobsData.defaultProgressMonsters.isEmpty()) defaultProgressMonsters = mobsData.defaultProgressMonsters;
+                if (mobsData.defaultProgressCreatures != null && !mobsData.defaultProgressCreatures.isEmpty()) defaultProgressCreatures = mobsData.defaultProgressCreatures;
+                if (mobsData.customProgressRequirements != null) customProgressRequirements = mobsData.customProgressRequirements;
+                interactionCooldownMinutes = mobsData.interactionCooldownMinutes;
+                rideDistanceBlocks = mobsData.rideDistanceBlocks;
+            }
+
+            RewardsData rewardsData = GSON.fromJson(rewardsJson, RewardsData.class);
+            if (rewardsData != null) {
+                if (rewardsData.xpBosses != null && !rewardsData.xpBosses.isEmpty()) xpBosses = rewardsData.xpBosses;
+                if (rewardsData.xpMonsters != null && !rewardsData.xpMonsters.isEmpty()) xpMonsters = rewardsData.xpMonsters;
+                if (rewardsData.xpCreatures != null && !rewardsData.xpCreatures.isEmpty()) xpCreatures = rewardsData.xpCreatures;
+                milestoneInterval = rewardsData.milestoneInterval;
+                if (rewardsData.milestoneRewards != null) milestoneRewards = rewardsData.milestoneRewards;
+                if (rewardsData.categoryRewards != null) categoryRewards = rewardsData.categoryRewards;
+            }
+            System.out.println("[R3CT-Bestiary] Pomyślnie zsynchronizowano konfigurację serwera do RAMu!");
+        } catch (Exception e) {
+            System.err.println("[R3CT-Bestiary] Błąd podczas synchronizacji konfiguracji!");
+            e.printStackTrace();
+        }
+    }
 }
