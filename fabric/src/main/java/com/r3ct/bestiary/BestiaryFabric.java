@@ -74,11 +74,9 @@ public class BestiaryFabric implements ModInitializer {
                 if (player.level().isLoaded(payload.pos()) && player.distanceToSqr(net.minecraft.world.phys.Vec3.atCenterOf(payload.pos())) < 64.0) {
                     net.minecraft.world.level.block.entity.BlockEntity be = player.level().getBlockEntity(payload.pos());
                     if (be instanceof com.r3ct.bestiary.block.TrophyBlockEntity tbe) {
-                        if (tbe.getEntityList().contains(payload.entityId())) {
-                            tbe.setDisplayEntityId(payload.entityId());
-                            // Satysfakcjonujący dźwięk słyszany przez innych graczy w pobliżu
-                            player.level().playSound(null, payload.pos(), net.minecraft.sounds.SoundEvents.UI_BUTTON_CLICK.value(), net.minecraft.sounds.SoundSource.BLOCKS, 0.5f, 1.2f);
-                        }
+                        // Usunięto .contains, by wymusić zaufanie do kliknięcia z GUI
+                        tbe.setDisplayEntityId(payload.entityId());
+                        player.level().playSound(null, payload.pos(), net.minecraft.sounds.SoundEvents.UI_BUTTON_CLICK.value(), net.minecraft.sounds.SoundSource.BLOCKS, 0.5f, 1.2f);
                     }
                 }
             });

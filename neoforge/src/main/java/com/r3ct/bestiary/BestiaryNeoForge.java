@@ -75,14 +75,12 @@ public class BestiaryNeoForge {
         registrar.playToServer(
                 com.r3ct.bestiary.network.SetTrophyEntityPayload.TYPE, com.r3ct.bestiary.network.SetTrophyEntityPayload.CODEC,
                 (payload, context) -> context.enqueueWork(() -> {
-                    net.minecraft.world.entity.player.Player player = context.player();
+                    net.minecraft.world.entity.player.Player player = (net.minecraft.world.entity.player.Player) context.player();
                     if (player.level().isLoaded(payload.pos()) && player.distanceToSqr(net.minecraft.world.phys.Vec3.atCenterOf(payload.pos())) < 64.0) {
                         net.minecraft.world.level.block.entity.BlockEntity be = player.level().getBlockEntity(payload.pos());
                         if (be instanceof com.r3ct.bestiary.block.TrophyBlockEntity tbe) {
-                            if (tbe.getEntityList().contains(payload.entityId())) {
-                                tbe.setDisplayEntityId(payload.entityId());
-                                player.level().playSound(null, payload.pos(), net.minecraft.sounds.SoundEvents.UI_BUTTON_CLICK.value(), net.minecraft.sounds.SoundSource.BLOCKS, 0.5f, 1.2f);
-                            }
+                            tbe.setDisplayEntityId(payload.entityId());
+                            player.level().playSound(null, payload.pos(), net.minecraft.sounds.SoundEvents.UI_BUTTON_CLICK.value(), net.minecraft.sounds.SoundSource.BLOCKS, 0.5f, 1.2f);
                         }
                     }
                 })

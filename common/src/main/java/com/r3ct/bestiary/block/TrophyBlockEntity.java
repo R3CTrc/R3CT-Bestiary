@@ -66,7 +66,6 @@ public class TrophyBlockEntity extends BlockEntity {
         return this.displayEntityId;
     }
 
-    // Dodaj to gdzieś pod getDisplayEntityId()
     public List<String> getEntityList() {
         return this.entityList;
     }
@@ -76,7 +75,6 @@ public class TrophyBlockEntity extends BlockEntity {
         if (this.displayEntityCache == null && this.displayEntityId != null && !this.displayEntityId.isEmpty()) {
             EntityType<?> type = BuiltInRegistries.ENTITY_TYPE.get(Identifier.parse(this.displayEntityId)).map(net.minecraft.core.Holder::value).orElse(null);
             if (type != null) {
-                // Tworzymy fałszywą encję w trybie odczytu (LOAD) - nie istnieje ona fizycznie na serwerze!
                 this.displayEntityCache = type.create(this.level, EntitySpawnReason.LOAD);
             }
         }
@@ -101,11 +99,8 @@ public class TrophyBlockEntity extends BlockEntity {
 
     public void cycleDisplayEntity() {
         if (this.entityList == null || this.entityList.isEmpty()) return;
-
         int currentIndex = this.entityList.indexOf(this.displayEntityId);
-        // Jeśli nie znaleziono lub jest ostatni, wracamy do zera, w przeciwnym razie bierzemy następnego
         int nextIndex = (currentIndex == -1 || currentIndex >= this.entityList.size() - 1) ? 0 : currentIndex + 1;
-
         setDisplayEntityId(this.entityList.get(nextIndex));
     }
 
@@ -118,7 +113,6 @@ public class TrophyBlockEntity extends BlockEntity {
                     .result()
                     .ifPresent(jsonElement -> output.putString("CustomName", jsonElement.toString()));
         }
-
         if (this.displayEntityId != null && !this.displayEntityId.isEmpty()) {
             output.putString("DisplayEntity", this.displayEntityId);
         }
@@ -143,7 +137,12 @@ public class TrophyBlockEntity extends BlockEntity {
             } catch (Exception e) {}
         });
 
-        input.getString("DisplayEntity").ifPresent(id -> this.displayEntityId = id);
+        input.getString("DisplayEntity").ifPresent(id -> {
+            if (!this.displayEntityId.equals(id)) {
+                this.displayEntityId = id;
+                this.displayEntityCache = null; // KLUCZOWE: Resetujemy cache na kliencie!
+            }
+        });
         input.getString("OwnerName").ifPresent(name -> this.ownerName = name);
         input.getString("EntityListString").ifPresent(str -> {
             this.entityList.clear();
@@ -160,11 +159,20 @@ public class TrophyBlockEntity extends BlockEntity {
         CustomData customData = input.get(DataComponents.CUSTOM_DATA);
         if (customData != null) {
             CompoundTag tag = customData.copyTag();
-            String entity = tag.getString("DisplayEntity").orElse("");
-            if (!entity.isEmpty()) this.displayEntityId = entity;
 
-            String owner = tag.getString("OwnerName").orElse("");
-            if (!owner.isEmpty()) this.ownerName = owner;
+            if (tag.contains("DisplayEntity")) {
+                // ROZWIĄZANIE: dodanie .orElse("")
+                String newId = tag.getString("DisplayEntity").orElse("");
+                if (!this.displayEntityId.equals(newId)) {
+                    this.displayEntityId = newId;
+                    this.displayEntityCache = null; // KLUCZOWE
+                }
+            }
+
+            if (tag.contains("OwnerName")) {
+                // ROZWIĄZANIE: dodanie .orElse("")
+                this.ownerName = tag.getString("OwnerName").orElse("");
+            }
 
             if (tag.contains("EntityList")) {
                 Tag rawTag = tag.get("EntityList");
@@ -210,9 +218,16 @@ public class TrophyBlockEntity extends BlockEntity {
         }
     }
 
+    // GWARANCJA SYNCHRONIZACJI Z KLIENTEM (omija ValueOutput)
     @Override
     public CompoundTag getUpdateTag(HolderLookup.Provider registries) {
-        return this.saveWithoutMetadata(registries);
+        CompoundTag tag = super.getUpdateTag(registries);
+        tag.putString("DisplayEntity", this.displayEntityId);
+        tag.putString("OwnerName", this.ownerName);
+        if (!this.entityList.isEmpty()) {
+            tag.putString("EntityListString", String.join(",", this.entityList));
+        }
+        return tag;
     }
 
     @Override
