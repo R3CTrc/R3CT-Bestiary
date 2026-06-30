@@ -58,12 +58,21 @@ public class BestiaryNeoForge {
                     ClientPlayerData.leaderboardData = new java.util.ArrayList<>(payload.entries());
                 })
         );
+
+        registrar.playToClient(
+                com.r3ct.bestiary.network.MobStatsSyncPayload.TYPE, com.r3ct.bestiary.network.MobStatsSyncPayload.STREAM_CODEC,
+                (payload, context) -> context.enqueueWork(() -> {
+                    ClientPlayerData.serverMobStats = payload.statsMap();
+                })
+        );
     }
 
     private void onPlayerJoin(PlayerEvent.PlayerLoggedInEvent event) {
         if (event.getEntity() instanceof ServerPlayer serverPlayer) {
             com.r3ct.bestiary.data.PlayerData data = com.r3ct.bestiary.data.ModState.getPlayerData(serverPlayer.level().getServer(), serverPlayer.getUUID());
             com.r3ct.bestiary.platform.Services.PLATFORM.sendSyncDataPacketToClient(serverPlayer, data.killCounts, data.rewardedCategories);
+            var statsMap = com.r3ct.bestiary.scanner.ServerMobScanner.getServerMobStats(serverPlayer.level());
+            net.neoforged.neoforge.network.PacketDistributor.sendToPlayer(serverPlayer, new com.r3ct.bestiary.network.MobStatsSyncPayload(statsMap));
         }
     }
 

@@ -1,0 +1,12 @@
+{
+  "replace": false,
+  "values": [
+    "minecraft:blaze",
+    "minecraft:breeze",
+    "minecraft:shulker",
+    "minecraft:witch",
+    "minecraft:guardian",
+    "minecraft:elder_guardian",
+    "minecraft:ender_dragon"
+  ]
+}

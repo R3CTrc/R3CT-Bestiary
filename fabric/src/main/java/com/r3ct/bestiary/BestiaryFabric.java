@@ -67,10 +67,13 @@ public class BestiaryFabric implements ModInitializer {
         PayloadTypeRegistry.clientboundPlay().register(SyncDataPayload.TYPE, SyncDataPayload.CODEC);
         PayloadTypeRegistry.serverboundPlay().register(com.r3ct.bestiary.network.RequestLeaderboardPayload.TYPE, com.r3ct.bestiary.network.RequestLeaderboardPayload.CODEC);
         PayloadTypeRegistry.clientboundPlay().register(com.r3ct.bestiary.network.LeaderboardDataPayload.TYPE, com.r3ct.bestiary.network.LeaderboardDataPayload.CODEC);
+        PayloadTypeRegistry.clientboundPlay().register(com.r3ct.bestiary.network.MobStatsSyncPayload.TYPE, com.r3ct.bestiary.network.MobStatsSyncPayload.STREAM_CODEC);
 
         ServerPlayConnectionEvents.JOIN.register((handler, sender, server) -> {
             com.r3ct.bestiary.data.PlayerData data = com.r3ct.bestiary.data.ModState.getPlayerData(server, handler.player.getUUID());
             com.r3ct.bestiary.platform.Services.PLATFORM.sendSyncDataPacketToClient(handler.player, data.killCounts, data.rewardedCategories);
+            var statsMap = com.r3ct.bestiary.scanner.ServerMobScanner.getServerMobStats(handler.player.level());
+            ServerPlayNetworking.send(handler.player, new com.r3ct.bestiary.network.MobStatsSyncPayload(statsMap));
         });
 
         ServerPlayNetworking.registerGlobalReceiver(com.r3ct.bestiary.network.RequestLeaderboardPayload.TYPE, (payload, context) -> {

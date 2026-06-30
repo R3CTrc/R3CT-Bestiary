@@ -4,6 +4,7 @@ import com.r3ct.bestiary.client.data.ClientPlayerData;
 import com.r3ct.bestiary.config.BestiaryConfig;
 import com.r3ct.bestiary.logic.MobProgressHandler;
 import com.r3ct.bestiary.scanner.EntityTypeScanner;
+import net.minecraft.ChatFormatting;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.client.renderer.RenderPipelines;
@@ -42,11 +43,8 @@ public class BestiaryScreen extends Screen {
     private boolean isScrolling = false;
 
     private final List<EntityTypeScanner.CategoryData> cachedCategories = new ArrayList<>();
-
-    // Cache dla niewidzialnych "Manekinów" sczytujących atrybuty mobów
     private final java.util.Map<String, net.minecraft.world.entity.LivingEntity> dummyCache = new java.util.HashMap<>();
 
-    // Dodano nową zakładkę DETAILS oraz zmienną śledzącą wybranego moba
     private enum SpecialTab { NONE, HOME, INFO, LEADERBOARD, DETAILS }
     private SpecialTab activeSpecialTab = SpecialTab.HOME;
     private String selectedEntityId = null;
@@ -123,16 +121,11 @@ public class BestiaryScreen extends Screen {
                 return new ItemStack(eggOptional.get().value());
             }
         }
-
         return new ItemStack(Items.SPAWNER);
     }
 
-    // Metoda pomocnicza tworząca Manekina do zbadania atrybutów i renderowania 3D
     private net.minecraft.world.entity.LivingEntity getOrCreateDummy(String entityId) {
-        if (dummyCache.containsKey(entityId)) {
-            return dummyCache.get(entityId);
-        }
-
+        if (dummyCache.containsKey(entityId)) return dummyCache.get(entityId);
         if (this.minecraft == null || this.minecraft.level == null) return null;
 
         EntityType<?> type = net.minecraft.core.registries.BuiltInRegistries.ENTITY_TYPE.get(Identifier.parse(entityId)).map(net.minecraft.core.Holder::value).orElse(null);
@@ -141,12 +134,14 @@ public class BestiaryScreen extends Screen {
                 net.minecraft.world.entity.Entity entity = type.create(this.minecraft.level, net.minecraft.world.entity.EntitySpawnReason.COMMAND);
                 if (entity instanceof net.minecraft.world.entity.LivingEntity living) {
 
-                    // Bezpieczne ubranie mobów na kliencie (zastępuje finalizeSpawn)
-                    if (type == EntityType.WITHER_SKELETON) living.setItemSlot(net.minecraft.world.entity.EquipmentSlot.MAINHAND, new ItemStack(Items.STONE_SWORD));
-                    else if (type == EntityType.VINDICATOR) living.setItemSlot(net.minecraft.world.entity.EquipmentSlot.MAINHAND, new ItemStack(Items.IRON_AXE));
-                    else if (type == EntityType.PIGLIN_BRUTE) living.setItemSlot(net.minecraft.world.entity.EquipmentSlot.MAINHAND, new ItemStack(Items.GOLDEN_AXE));
-                    else if (type == EntityType.SKELETON) living.setItemSlot(net.minecraft.world.entity.EquipmentSlot.MAINHAND, new ItemStack(Items.BOW));
-                    else if (type == EntityType.PILLAGER) living.setItemSlot(net.minecraft.world.entity.EquipmentSlot.MAINHAND, new ItemStack(Items.CROSSBOW));
+                    com.r3ct.bestiary.network.MobBaseStats serverStats = ClientPlayerData.serverMobStats.get(entityId);
+                    if (serverStats != null) {
+                        living.setItemSlot(net.minecraft.world.entity.EquipmentSlot.MAINHAND, serverStats.mainHandItem());
+                        var hpAttr = living.getAttribute(net.minecraft.world.entity.ai.attributes.Attributes.MAX_HEALTH);
+                        if (hpAttr != null) hpAttr.setBaseValue(serverStats.maxHealth());
+                        var dmgAttr = living.getAttribute(net.minecraft.world.entity.ai.attributes.Attributes.ATTACK_DAMAGE);
+                        if (dmgAttr != null) dmgAttr.setBaseValue(serverStats.attackDamage());
+                    }
 
                     dummyCache.put(entityId, living);
                     return living;
@@ -160,7 +155,7 @@ public class BestiaryScreen extends Screen {
 
     @Override
     public void extractRenderState(@NonNull GuiGraphicsExtractor guiGraphics, int mouseX, int mouseY, float partialTick) {
-        this.extractTransparentBackground(guiGraphics);
+        this.extractBlurredBackground(guiGraphics);
 
         float scale = calculateEffectiveScale();
         double scaledMouseX = (mouseX - this.width / 2.0) / scale + this.width / 2.0;
@@ -228,7 +223,7 @@ public class BestiaryScreen extends Screen {
 
     private void renderHomeTab(GuiGraphicsExtractor guiGraphics, int bookX, int bookY, double scaledMouseX, double scaledMouseY, int rawMouseX, int rawMouseY, float deltaTime) {
         int centerX = bookX + (RENDER_SIZE / 2);
-        Component title = Component.translatable("gui.r3ct_bestiary.catalog.tab_home");
+        Component title = Component.translatable("gui.r3ct_bestiary.catalog.tab_home").withStyle(ChatFormatting.DARK_GRAY);
         guiGraphics.text(this.font, title, centerX - (this.font.width(title) / 2) - 8, bookY + 15, 0xFF333333, false);
 
         int listStartY = bookY + 47;
@@ -301,7 +296,7 @@ public class BestiaryScreen extends Screen {
         int currentY = bookY + 40;
         int maxWidth = 150;
 
-        currentY = drawWrappedText(guiGraphics, Component.translatable("gui.r3ct_bestiary.info.rewards_title").withStyle(net.minecraft.ChatFormatting.BOLD), textX, currentY, maxWidth, 0xFF000000);
+        currentY = drawWrappedText(guiGraphics, Component.translatable("gui.r3ct_bestiary.info.rewards_title").withStyle(ChatFormatting.BOLD), textX, currentY, maxWidth, 0xFF000000);
         currentY += 5;
 
         currentY = drawWrappedText(guiGraphics, Component.translatable("gui.r3ct_bestiary.info.point1"), textX, currentY, maxWidth, 0xFF333333);
@@ -335,18 +330,21 @@ public class BestiaryScreen extends Screen {
             com.r3ct.bestiary.network.LeaderboardDataPayload.TopPlayerEntry entry = ClientPlayerData.leaderboardData.get(i);
             int y = startY + (i * 19);
 
-            String nameColor = (i == 0) ? "§5§l" : (i == 1) ? "§6§l" : (i == 2) ? "§3§l" : "§8";
-            String valColor = (i == 0) ? "§5" : (i == 1) ? "§6" : (i == 2) ? "§3" : "§8";
+            ChatFormatting nameFormat = (i == 0) ? ChatFormatting.DARK_PURPLE : (i == 1) ? ChatFormatting.GOLD : (i == 2) ? ChatFormatting.DARK_AQUA : ChatFormatting.DARK_GRAY;
 
             ItemStack head = new ItemStack(Items.PLAYER_HEAD);
             head.set(net.minecraft.core.component.DataComponents.PROFILE, net.minecraft.world.item.component.ResolvableProfile.createUnresolved(entry.name()));
             guiGraphics.item(head, startX, y);
 
-            guiGraphics.text(this.font, "§8" + (i + 1) + ". " + nameColor + entry.name(), startX + 20, y + 4, 0xFF333333, false);
+            Component namePart = Component.literal(entry.name()).withStyle(nameFormat);
+            if (i < 3) namePart = namePart.copy().withStyle(ChatFormatting.BOLD);
 
-            String scoreTxt = valColor + entry.totalCompleted();
+            Component entryName = Component.literal((i + 1) + ". ").withStyle(ChatFormatting.DARK_GRAY).append(namePart);
+            guiGraphics.text(this.font, entryName, startX + 20, y + 4, 0xFFFFFFFF, false);
+
+            Component scoreTxt = Component.literal(String.valueOf(entry.totalCompleted())).withStyle(nameFormat);
             int scoreWidth = this.font.width(scoreTxt);
-            guiGraphics.text(this.font, scoreTxt, startX + 145 - scoreWidth, y + 4, 0xFF333333, false);
+            guiGraphics.text(this.font, scoreTxt, startX + 145 - scoreWidth, y + 4, 0xFFFFFFFF, false);
 
             if (scaledMouseX >= startX && scaledMouseX <= startX + 155 && scaledMouseY >= y && scaledMouseY <= y + 16) {
                 hoveredEntry = entry;
@@ -357,14 +355,18 @@ public class BestiaryScreen extends Screen {
         if (hoveredEntry != null) {
             java.util.List<net.minecraft.client.gui.screens.inventory.tooltip.ClientTooltipComponent> tt = new java.util.ArrayList<>();
 
-            tt.add(net.minecraft.client.gui.screens.inventory.tooltip.ClientTooltipComponent.create(Component.literal("     §f§l" + hoveredEntry.name()).getVisualOrderText()));
+            tt.add(net.minecraft.client.gui.screens.inventory.tooltip.ClientTooltipComponent.create(
+                    Component.literal("     ").append(Component.literal(hoveredEntry.name()).withStyle(ChatFormatting.WHITE, ChatFormatting.BOLD)).getVisualOrderText()
+            ));
 
             Component totalKillsComp = Component.translatable("gui.r3ct_bestiary.leaderboard.total_kills")
-                    .withStyle(net.minecraft.ChatFormatting.GRAY)
-                    .append(Component.literal(": " + hoveredEntry.totalCompleted()).withStyle(net.minecraft.ChatFormatting.YELLOW));
+                    .withStyle(ChatFormatting.GRAY)
+                    .append(Component.literal(": " + hoveredEntry.totalCompleted()).withStyle(ChatFormatting.YELLOW));
             tt.add(net.minecraft.client.gui.screens.inventory.tooltip.ClientTooltipComponent.create(totalKillsComp.getVisualOrderText()));
 
-            tt.add(net.minecraft.client.gui.screens.inventory.tooltip.ClientTooltipComponent.create(Component.literal("§8----------------").getVisualOrderText()));
+            tt.add(net.minecraft.client.gui.screens.inventory.tooltip.ClientTooltipComponent.create(
+                    Component.literal("----------------").withStyle(ChatFormatting.DARK_GRAY).getVisualOrderText()
+            ));
 
             for (EntityTypeScanner.CategoryData cat : cachedCategories) {
                 int max = cat.entityIds.isEmpty() ? 1 : cat.entityIds.size();
@@ -374,12 +376,16 @@ public class BestiaryScreen extends Screen {
                 }
 
                 int percent = Math.clamp(Math.round(((float) gathered / max) * 100), 0, 100);
-                String colorCode = percent < 33 ? "§c" : (percent < 66 ? "§6" : "§a");
+                ChatFormatting colorCode = percent < 33 ? ChatFormatting.RED : (percent < 66 ? ChatFormatting.GOLD : ChatFormatting.GREEN);
 
                 Component catNameComp = Component.literal(cat.getFormattedModName() + ": ")
                         .append(Component.translatable("mobcategory." + cat.type));
-                String line = "§7" + catNameComp.getString() + ": " + colorCode + percent + "%";
-                tt.add(net.minecraft.client.gui.screens.inventory.tooltip.ClientTooltipComponent.create(Component.literal(line).getVisualOrderText()));
+
+                Component line = catNameComp.copy().withStyle(ChatFormatting.GRAY)
+                        .append(Component.literal(": ").withStyle(ChatFormatting.GRAY))
+                        .append(Component.literal(percent + "%").withStyle(colorCode));
+
+                tt.add(net.minecraft.client.gui.screens.inventory.tooltip.ClientTooltipComponent.create(line.getVisualOrderText()));
             }
 
             guiGraphics.tooltip(this.font, tt, (int) scaledMouseX, (int) scaledMouseY, net.minecraft.client.gui.screens.inventory.tooltip.DefaultTooltipPositioner.INSTANCE, null);
@@ -591,7 +597,6 @@ public class BestiaryScreen extends Screen {
                 gridIcon = Component.literal("✔");
                 tooltipIcon = Component.literal("✔");
                 finalIconColor = 0xFF55FF55;
-                // ZMIANA: Gdy mamy max poziom (3 poziom), liczby stają się ZIELONE (0xFF55FF55)
                 progressColor = (starLevel == 3) ? 0xFF55FF55 : 0xFFFFAA00;
             } else if (currentKills > 0) {
                 gridIcon = null;
@@ -616,17 +621,16 @@ public class BestiaryScreen extends Screen {
                 int checkY = starLevel > 0 ? itemY + 1 : itemY + 4;
                 guiGraphics.text(this.font, gridIcon, itemX + 8 - (iconW / 2), checkY, finalIconColor, true);
 
-                // ZMIANA: Rysowanie fizycznych przedmiotów z gry (Papier) jako malutkich kartek
                 if (starLevel > 0) {
                     guiGraphics.pose().pushMatrix();
-                    float totalWidth = starLevel * 8.0f; // Każda kartka po zeskalowaniu ma 8 pikseli
-                    float startX = itemX + 8.0f - (totalWidth / 2.0f); // Centrowanie
+                    float totalWidth = starLevel * 8.0f;
+                    float startX = itemX + 8.0f - (totalWidth / 2.0f);
 
-                    guiGraphics.pose().translate(startX, itemY + 10.0f); // 200 Z żeby rysowało na samym wierzchu
-                    guiGraphics.pose().scale(0.5f, 0.5f); // Zmniejszenie ikony o połowę!
+                    guiGraphics.pose().translate(startX, itemY + 10.0f);
+                    guiGraphics.pose().scale(0.5f, 0.5f);
 
                     for (int s = 0; s < starLevel; s++) {
-                        guiGraphics.item(new ItemStack(Items.PAPER), s * 16, 0); // Renderowanie z odstępami
+                        guiGraphics.item(new ItemStack(Items.MOJANG_BANNER_PATTERN), s * 16, 0);
                     }
                     guiGraphics.pose().popMatrix();
                 }
@@ -651,29 +655,29 @@ public class BestiaryScreen extends Screen {
                 if (type != null) {
                     String bestiaryCat = MobProgressHandler.getBestiaryCategory(entityId, type.getCategory());
                     if (bestiaryCat.equals("creatures")) {
-                        itemTooltip.add(Component.translatable("gui.r3ct_bestiary.catalog.action.any").withStyle(net.minecraft.ChatFormatting.GREEN));
+                        itemTooltip.add(Component.translatable("gui.r3ct_bestiary.catalog.action.any").withStyle(ChatFormatting.GREEN));
                     } else {
-                        itemTooltip.add(Component.translatable("gui.r3ct_bestiary.catalog.action.kill").withStyle(net.minecraft.ChatFormatting.RED));
+                        itemTooltip.add(Component.translatable("gui.r3ct_bestiary.catalog.action.kill").withStyle(ChatFormatting.RED));
                     }
                 }
 
                 itemTooltip.add(Component.literal(" "));
 
                 int totalPages = (isCollected ? 1 : 0) + starLevel;
+                ChatFormatting pageColor = (starLevel == 3) ? ChatFormatting.GREEN : ChatFormatting.YELLOW;
 
-                // AKTUALIZACJA: Zielony kolor (§a) dla maksymalnego poziomu (4 strony), w innych wypadkach żółty (§e)
-                String pageColorCode = (starLevel == 3) ? "§a" : "§e";
+                Component pageText = Component.translatable("gui.r3ct_bestiary.catalog.gathered_pages",
+                                Component.literal(String.valueOf(totalPages)).withStyle(pageColor))
+                        .withStyle(ChatFormatting.GRAY);
 
-                // Usunięto również tekstowy symbol ▤ z końca linijki
-                itemTooltip.add(Component.literal("§7Zebrane strony: " + pageColorCode + totalPages + " / 4"));
-                itemTooltip.add(Component.literal("§8(Kliknij, aby otworzyć dziennik)"));
+                itemTooltip.add(pageText);
+                itemTooltip.add(Component.translatable("gui.r3ct_bestiary.catalog.click_to_open").withStyle(ChatFormatting.DARK_GRAY));
 
                 guiGraphics.setComponentTooltipForNextFrame(this.font, itemTooltip, rawMouseX, rawMouseY);
             }
         }
     }
 
-    // --- NOWA METODA: Renderowanie Strony Badawczej Moba (Układ Pionowy - Poprawione Wymiary) ---
     private void renderDetailsTab(GuiGraphicsExtractor guiGraphics, int bookX, int bookY, double scaledMouseX, double scaledMouseY, int rawMouseX, int rawMouseY) {
         if (selectedEntityId == null) return;
 
@@ -702,9 +706,9 @@ public class BestiaryScreen extends Screen {
         int boxX0 = centerX - 60;
         int boxY0 = bookY + 20;
         int boxX1 = centerX + 60;
-        int boxY1 = bookY + 100; // Mniejsze od dołu o 10 pikseli (było 110)
+        int boxY1 = bookY + 100;
 
-        guiGraphics.fill(boxX0, boxY0, boxX1, boxY1, 0x11000000); // Tło podglądu
+        guiGraphics.fill(boxX0, boxY0, boxX1, boxY1, 0x11000000);
 
         if (dummy != null && isCollected) {
             float maxDim = Math.max(dummy.getBbWidth(), dummy.getBbHeight());
@@ -715,11 +719,11 @@ public class BestiaryScreen extends Screen {
                     scale, 0.0625F, (float) scaledMouseX, (float) scaledMouseY, dummy
             );
         } else {
-            Component unknown = Component.literal("?").withStyle(net.minecraft.ChatFormatting.GOLD);
+            Component unknown = Component.literal("?").withStyle(ChatFormatting.GOLD);
             guiGraphics.pose().pushMatrix();
-            guiGraphics.pose().translate((float)centerX, (float)(boxY0 + 40)); // Dostosowane centrowanie pytajnika
+            guiGraphics.pose().translate((float)centerX, (float)(boxY0 + 40));
             guiGraphics.pose().scale(4.0f, 4.0f);
-            guiGraphics.text(this.font, unknown, -this.font.width(unknown) / 2, -this.font.lineHeight / 2, 0xFFFFAA00, false);
+            guiGraphics.text(this.font, unknown, -this.font.width(unknown) / 2, -this.font.lineHeight / 2, 0xFFFFFFFF, false);
             guiGraphics.pose().popMatrix();
         }
 
@@ -727,30 +731,31 @@ public class BestiaryScreen extends Screen {
         Component title = type.getDescription();
         guiGraphics.text(this.font, title, centerX - (this.font.width(title) / 2), bookY + 105, 0xFF000000, false);
 
-        // ZMIANA: Rysowanie tekstu z uwzględnieniem fizycznej, uroczej ikonki obok!
-        Component progressText = Component.literal("Zebrane strony: " + totalPages + "/4").withStyle(net.minecraft.ChatFormatting.DARK_GRAY);
+        ChatFormatting pageColor = (starLevel == 3) ? ChatFormatting.GREEN : ChatFormatting.YELLOW;
+        Component progressText = Component.translatable("gui.r3ct_bestiary.catalog.gathered_pages",
+                        Component.literal(String.valueOf(totalPages)).withStyle(pageColor))
+                .withStyle(ChatFormatting.DARK_GRAY);
+
         int textW = this.font.width(progressText);
-        int iconW = 10; // Przewidywana szerokość zminiaturyzowanego papieru
-        int totalW = textW + iconW + 2; // +2 px na odstęp
+        int iconW = 10;
+        int totalW = textW + iconW + 2;
         int startX = centerX - (totalW / 2);
 
-        guiGraphics.text(this.font, progressText, startX, bookY + 118, 0xFF333333, false);
+        guiGraphics.text(this.font, progressText, startX, bookY + 118, 0xFFFFFFFF, false);
 
-        // Rysujemy fizyczną ikonkę Papieru obok wyśrodkowanego tekstu
         guiGraphics.pose().pushMatrix();
         guiGraphics.pose().translate(startX + textW + 2, bookY + 116);
-        guiGraphics.pose().scale(0.6f, 0.6f); // Lekko zmniejszona do 60% normy
-        guiGraphics.item(new ItemStack(Items.PAPER), 0, 0);
+        guiGraphics.pose().scale(0.6f, 0.6f);
+        guiGraphics.item(new ItemStack(Items.MOJANG_BANNER_PATTERN), 0, 0);
         guiGraphics.pose().popMatrix();
 
-        // ==== DÓŁ: SCROLLOWANE STATYSTYKI NA CAŁĄ SZEROKOŚĆ ====
+        // ==== DÓŁ: SCROLLOWANE STATYSTYKI ====
         int textX = bookX + 50;
-        int listStartY = bookY + 135; // Wydłużone o 10px do góry (było 145)
-        int listHeight = 80;  // Wydłużone o 10px do góry i o 5px w dół (wzrost wysokości łącznie o 15px, było 65)
+        int listStartY = bookY + 135;
+        int listHeight = 80;
 
-        // Rysowanie paska scrolla
         if (maxDetailsScroll > 0) {
-            int trackX = bookX + 199; // Stabilna pozycja klasycznego paska
+            int trackX = bookX + 199;
             int trackY = listStartY;
             guiGraphics.fill(trackX, trackY, trackX + 4, trackY + listHeight, 0xFF1A0A04);
             float scrollFraction = (float) detailsScroll / maxDetailsScroll;
@@ -759,7 +764,6 @@ public class BestiaryScreen extends Screen {
             guiGraphics.fill(trackX, thumbY, trackX + 4, thumbY + thumbH, isScrolling ? 0xFFA07A5A : 0xFF8A5A3A);
         }
 
-        // Aktywacja "nożyczek" pod listę (nowe granice Y: 135, H: 80)
         guiGraphics.enableScissor(bookX + 40, listStartY, bookX + 195, listStartY + listHeight);
 
         guiGraphics.pose().pushMatrix();
@@ -768,93 +772,166 @@ public class BestiaryScreen extends Screen {
         int currentY = listStartY;
 
         // 1. ZALICZENIE
-        guiGraphics.text(this.font, "§l1. Informacje Ogólne", textX, currentY, 0xFF333333, false); currentY += 12;
+        Component infoTitle = Component.translatable("gui.r3ct_bestiary.details.general_info").withStyle(ChatFormatting.BOLD, ChatFormatting.DARK_GRAY);
+        guiGraphics.text(this.font, infoTitle, textX, currentY, 0xFFFFFFFF, false); currentY += 12;
+
         if (totalPages >= 1) {
-            String typeName = "Zwykły";
+            String typeKey = "gui.r3ct_bestiary.family.default";
             var holder = type.builtInRegistryHolder();
-            if (holder.is(net.minecraft.tags.EntityTypeTags.UNDEAD)) typeName = "Nieumarły";
-            else if (holder.is(net.minecraft.tags.EntityTypeTags.ARTHROPOD)) typeName = "Stawonóg";
-            else if (holder.is(net.minecraft.tags.EntityTypeTags.AQUATIC)) typeName = "Wodny";
-            else if (holder.is(net.minecraft.tags.EntityTypeTags.ILLAGER)) typeName = "Złosadnik";
-            else if (holder.is(net.minecraft.tags.EntityTypeTags.SKELETONS)) typeName = "Szkielet";
-            else if (type.getCategory() == net.minecraft.world.entity.MobCategory.MONSTER) typeName = "Potwór";
-            else if (type.getCategory() == net.minecraft.world.entity.MobCategory.CREATURE) typeName = "Zwierzę";
-            guiGraphics.text(this.font, "§7Rodzina: §0" + typeName, textX, currentY, 0xFFFFFFFF, false);
+            if (holder.is(net.minecraft.tags.EntityTypeTags.UNDEAD)) typeKey = "gui.r3ct_bestiary.family.undead";
+            else if (holder.is(net.minecraft.tags.EntityTypeTags.ARTHROPOD)) typeKey = "gui.r3ct_bestiary.family.arthropod";
+            else if (holder.is(net.minecraft.tags.EntityTypeTags.AQUATIC)) typeKey = "gui.r3ct_bestiary.family.aquatic";
+            else if (holder.is(net.minecraft.tags.EntityTypeTags.ILLAGER)) typeKey = "gui.r3ct_bestiary.family.illager";
+            else if (holder.is(net.minecraft.tags.EntityTypeTags.SKELETONS)) typeKey = "gui.r3ct_bestiary.family.skeleton";
+            else if (type.getCategory() == net.minecraft.world.entity.MobCategory.MONSTER) typeKey = "gui.r3ct_bestiary.family.monster";
+            else if (type.getCategory() == net.minecraft.world.entity.MobCategory.CREATURE) typeKey = "gui.r3ct_bestiary.family.creature";
+
+            Component familyComp = Component.translatable("gui.r3ct_bestiary.details.family").withStyle(ChatFormatting.GRAY)
+                    .append(Component.translatable(typeKey).withStyle(ChatFormatting.BLACK));
+            guiGraphics.text(this.font, familyComp, textX, currentY, 0xFFFFFFFF, false);
         } else {
-            guiGraphics.text(this.font, "§7Rodzina: §6?", textX, currentY, 0xFFFFFFFF, false);
+            Component unknownFamily = Component.translatable("gui.r3ct_bestiary.details.family").withStyle(ChatFormatting.GRAY)
+                    .append(Component.literal("?").withStyle(ChatFormatting.GOLD));
+            guiGraphics.text(this.font, unknownFamily, textX, currentY, 0xFFFFFFFF, false);
         }
         currentY += 16;
 
         // 2. PIERWSZA GWIAZDKA
-        guiGraphics.text(this.font, "§l2. Budowa Ciała", textX, currentY, 0xFF333333, false); currentY += 12;
+        Component bodyTitle = Component.translatable("gui.r3ct_bestiary.details.body_structure").withStyle(ChatFormatting.BOLD, ChatFormatting.DARK_GRAY);
+        guiGraphics.text(this.font, bodyTitle, textX, currentY, 0xFFFFFFFF, false); currentY += 12;
+
         if (totalPages >= 2 && dummy != null) {
             int hp = Math.round(dummy.getMaxHealth());
             int armor = dummy.getArmorValue();
             String size = String.format(java.util.Locale.US, "%.1fm x %.1fm", dummy.getBbWidth(), dummy.getBbHeight());
-            guiGraphics.text(this.font, "§7Życie: §c" + hp + " ❤", textX, currentY, 0xFFFFFFFF, false); currentY += 10;
-            guiGraphics.text(this.font, "§7Pancerz: §9" + armor + " 🛡", textX, currentY, 0xFFFFFFFF, false); currentY += 10;
-            guiGraphics.text(this.font, "§7Wymiary: §0" + size, textX, currentY, 0xFFFFFFFF, false);
+
+            Component hpComp = Component.translatable("gui.r3ct_bestiary.details.health").withStyle(ChatFormatting.GRAY)
+                    .append(Component.literal(hp + " ❤").withStyle(ChatFormatting.RED));
+            guiGraphics.text(this.font, hpComp, textX, currentY, 0xFFFFFFFF, false); currentY += 10;
+
+            Component armorComp = Component.translatable("gui.r3ct_bestiary.details.armor").withStyle(ChatFormatting.GRAY)
+                    .append(Component.literal(armor + " 🛡").withStyle(ChatFormatting.BLUE));
+            guiGraphics.text(this.font, armorComp, textX, currentY, 0xFFFFFFFF, false); currentY += 10;
+
+            Component sizeComp = Component.translatable("gui.r3ct_bestiary.details.dimensions").withStyle(ChatFormatting.GRAY)
+                    .append(Component.literal(size).withStyle(ChatFormatting.BLACK));
+            guiGraphics.text(this.font, sizeComp, textX, currentY, 0xFFFFFFFF, false);
         } else {
-            guiGraphics.text(this.font, "§7Życie: §6?", textX, currentY, 0xFFFFFFFF, false); currentY += 10;
-            guiGraphics.text(this.font, "§7Pancerz: §6?", textX, currentY, 0xFFFFFFFF, false); currentY += 10;
-            guiGraphics.text(this.font, "§7Wymiary: §6?", textX, currentY, 0xFFFFFFFF, false);
+            Component hpUnk = Component.translatable("gui.r3ct_bestiary.details.health").withStyle(ChatFormatting.GRAY).append(Component.literal("?").withStyle(ChatFormatting.GOLD));
+            Component armorUnk = Component.translatable("gui.r3ct_bestiary.details.armor").withStyle(ChatFormatting.GRAY).append(Component.literal("?").withStyle(ChatFormatting.GOLD));
+            Component dimUnk = Component.translatable("gui.r3ct_bestiary.details.dimensions").withStyle(ChatFormatting.GRAY).append(Component.literal("?").withStyle(ChatFormatting.GOLD));
+
+            guiGraphics.text(this.font, hpUnk, textX, currentY, 0xFFFFFFFF, false); currentY += 10;
+            guiGraphics.text(this.font, armorUnk, textX, currentY, 0xFFFFFFFF, false); currentY += 10;
+            guiGraphics.text(this.font, dimUnk, textX, currentY, 0xFFFFFFFF, false);
         }
         currentY += 16;
 
         // 3. DRUGA GWIAZDKA
-        guiGraphics.text(this.font, "§l3. Nawyki i Atak", textX, currentY, 0xFF333333, false); currentY += 12;
+        Component habitsTitle = Component.translatable("gui.r3ct_bestiary.details.habits_and_attack").withStyle(net.minecraft.ChatFormatting.BOLD, net.minecraft.ChatFormatting.DARK_GRAY);
+        guiGraphics.text(this.font, habitsTitle, textX, currentY, 0xFFFFFFFF, false); currentY += 12;
+
         if (totalPages >= 3 && dummy != null) {
-            String dmgStr = "Brak";
+            Component dmgVal = Component.translatable("gui.r3ct_bestiary.details.none");
+
+            // 1. Odczytujemy dokładny bazowy atak (skaluje się z każdym modowanym mieczem czy siłą)
             var dmgAttr = dummy.getAttribute(net.minecraft.world.entity.ai.attributes.Attributes.ATTACK_DAMAGE);
-            double rawDamage = 0;
-            if (dmgAttr != null && dmgAttr.getValue() > 0) {
-                rawDamage = dmgAttr.getValue();
-                dmgStr = Math.round(rawDamage) + " ⚔";
+            double rawDamage = (dmgAttr != null) ? dmgAttr.getValue() : 0.0;
+
+            // 2. Pobieramy informacje o tagach z nowego systemu
+            var holder = type.builtInRegistryHolder();
+
+            // 3. Badamy broń (wyłapie modowane pistolety, łuki, włócznie dziedziczące po ProjectileWeaponItem)
+            ItemStack mainHand = dummy.getMainHandItem();
+            ItemStack offHand = dummy.getOffhandItem();
+            boolean hasRangedWeaponMain = mainHand.getItem() instanceof net.minecraft.world.item.ProjectileWeaponItem || mainHand.is(Items.TRIDENT);
+            boolean hasRangedWeaponOff = offHand.getItem() instanceof net.minecraft.world.item.ProjectileWeaponItem || offHand.is(Items.TRIDENT);
+
+            // 4. Kaskadowa logika przypisywania!
+            if (holder.is(com.r3ct.bestiary.logic.ModTags.ATTACK_EXPLOSIVE)) {
+                // Datapack powiedział, że to mob wybuchowy
+                dmgVal = Component.translatable("gui.r3ct_bestiary.details.explosion");
+
+            } else if (holder.is(com.r3ct.bestiary.logic.ModTags.ATTACK_SONIC)) {
+                // Warden i inni krzykacze z modów - łączymy dynamiczny melee z dopiskiem Sonic
+                dmgVal = Component.literal(Math.round(rawDamage) + " ⚔").append(Component.translatable("gui.r3ct_bestiary.details.sonic_boom"));
+
+            } else if (holder.is(com.r3ct.bestiary.logic.ModTags.ATTACK_MAGIC) || dummy instanceof net.minecraft.world.entity.monster.illager.SpellcasterIllager) {
+                // Datapack mówi "Magia" LUB implementuje interfejs rzucania czarów (nawet jeśli to nowy illager z moda)
+                dmgVal = Component.translatable("gui.r3ct_bestiary.details.magic");
+
+            } else if (hasRangedWeaponMain) {
+                // Wyciąga nazwę broni z głównej ręki (zostaje ikonka łuku, podmienia nazwę)
+                dmgVal = Component.literal("🏹 ").append(mainHand.getHoverName());
+
+            } else if (hasRangedWeaponOff) {
+                // Wyciąga nazwę broni z lewej ręki
+                dmgVal = Component.literal("🏹 ").append(offHand.getHoverName());
+
+            } else if (dummy instanceof net.minecraft.world.entity.monster.RangedAttackMob) {
+                // Plujące moby bez broni w ręku (Śnieżny Golem, Lama z Vanilla i modów)
+                dmgVal = Component.translatable("gui.r3ct_bestiary.details.ranged");
+
+            } else if (rawDamage > 0) {
+                // Mob walczy wręcz i ma zadawać obrażenia (Czysta, dokładna wartość!)
+                dmgVal = Component.literal(Math.round(rawDamage) + " ⚔");
             }
 
-            boolean holdsRangedWeapon = dummy.getMainHandItem().getItem() instanceof net.minecraft.world.item.ProjectileWeaponItem ||
-                    dummy.getOffhandItem().getItem() instanceof net.minecraft.world.item.ProjectileWeaponItem;
-
-            if (type == EntityType.CREEPER) dmgStr = "Eksplozja 💥";
-            else if (type == EntityType.WARDEN) dmgStr += " / Boom 🔊";
-            else if (type == EntityType.GHAST || type == EntityType.BLAZE || type == EntityType.BREEZE || type == EntityType.SHULKER || type == EntityType.WITCH) {
-                dmgStr = "Magia 🧪";
-            } else if (holdsRangedWeapon) {
-                if (rawDamage <= 3.0) dmgStr = "Dystansowe 🏹";
-                else dmgStr += " / Dystans 🏹";
-            }
-
-            String rangeStr = "Brak";
+            // --- Zasięg i prędkość pozostają niezmienione ---
+            Component rangeVal = Component.translatable("gui.r3ct_bestiary.details.none");
             var rangeAttr = dummy.getAttribute(net.minecraft.world.entity.ai.attributes.Attributes.FOLLOW_RANGE);
-            if (rangeAttr != null) rangeStr = Math.round(rangeAttr.getValue()) + " blk";
+            if (rangeAttr != null) {
+                rangeVal = Component.literal(Math.round(rangeAttr.getValue()) + " ").append(Component.translatable("gui.r3ct_bestiary.details.blocks"));
+            }
 
-            String speedStr = "Brak";
+            Component speedVal = Component.translatable("gui.r3ct_bestiary.details.none");
             var speedAttr = dummy.getAttribute(net.minecraft.world.entity.ai.attributes.Attributes.MOVEMENT_SPEED);
-            if (speedAttr != null) speedStr = String.format(java.util.Locale.US, "%.1f blk/s", speedAttr.getValue() * 43.0);
+            if (speedAttr != null) {
+                speedVal = Component.translatable("gui.r3ct_bestiary.details.blocks_per_sec", String.format(java.util.Locale.US, "%.1f", speedAttr.getValue() * 10.0));
+            }
 
-            guiGraphics.text(this.font, "§7Obrażenia: §c" + dmgStr, textX, currentY, 0xFFFFFFFF, false); currentY += 10;
-            guiGraphics.text(this.font, "§7Wzrok: §3" + rangeStr, textX, currentY, 0xFFFFFFFF, false); currentY += 10;
-            guiGraphics.text(this.font, "§7Szybkość: §0" + speedStr, textX, currentY, 0xFFFFFFFF, false);
+            // Rysowanie z kopiami by uniknąć crashy
+            Component dmgComp = Component.translatable("gui.r3ct_bestiary.details.damage").withStyle(net.minecraft.ChatFormatting.GRAY).append(dmgVal.copy().withStyle(net.minecraft.ChatFormatting.RED));
+            guiGraphics.text(this.font, dmgComp, textX, currentY, 0xFFFFFFFF, false); currentY += 10;
+
+            Component rangeComp = Component.translatable("gui.r3ct_bestiary.details.vision").withStyle(net.minecraft.ChatFormatting.GRAY).append(rangeVal.copy().withStyle(net.minecraft.ChatFormatting.DARK_AQUA));
+            guiGraphics.text(this.font, rangeComp, textX, currentY, 0xFFFFFFFF, false); currentY += 10;
+
+            Component speedComp = Component.translatable("gui.r3ct_bestiary.details.speed").withStyle(net.minecraft.ChatFormatting.GRAY).append(speedVal.copy().withStyle(net.minecraft.ChatFormatting.BLACK));
+            guiGraphics.text(this.font, speedComp, textX, currentY, 0xFFFFFFFF, false);
         } else {
-            guiGraphics.text(this.font, "§7Obrażenia: §6?", textX, currentY, 0xFFFFFFFF, false); currentY += 10;
-            guiGraphics.text(this.font, "§7Wzrok: §6?", textX, currentY, 0xFFFFFFFF, false); currentY += 10;
-            guiGraphics.text(this.font, "§7Szybkość: §6?", textX, currentY, 0xFFFFFFFF, false);
+            Component dmgUnk = Component.translatable("gui.r3ct_bestiary.details.damage").withStyle(net.minecraft.ChatFormatting.GRAY).append(Component.literal("?").withStyle(net.minecraft.ChatFormatting.GOLD));
+            Component rangeUnk = Component.translatable("gui.r3ct_bestiary.details.vision").withStyle(net.minecraft.ChatFormatting.GRAY).append(Component.literal("?").withStyle(net.minecraft.ChatFormatting.GOLD));
+            Component speedUnk = Component.translatable("gui.r3ct_bestiary.details.speed").withStyle(net.minecraft.ChatFormatting.GRAY).append(Component.literal("?").withStyle(net.minecraft.ChatFormatting.GOLD));
+
+            guiGraphics.text(this.font, dmgUnk, textX, currentY, 0xFFFFFFFF, false); currentY += 10;
+            guiGraphics.text(this.font, rangeUnk, textX, currentY, 0xFFFFFFFF, false); currentY += 10;
+            guiGraphics.text(this.font, speedUnk, textX, currentY, 0xFFFFFFFF, false);
         }
         currentY += 16;
 
         // 4. TRZECIA GWIAZDKA
-        guiGraphics.text(this.font, "§l4. Odporności", textX, currentY, 0xFF333333, false); currentY += 12;
+        Component resistTitle = Component.translatable("gui.r3ct_bestiary.details.resistances").withStyle(ChatFormatting.BOLD, ChatFormatting.DARK_GRAY);
+        guiGraphics.text(this.font, resistTitle, textX, currentY, 0xFFFFFFFF, false); currentY += 12;
+
         if (totalPages >= 4 && dummy != null) {
-            String fireStr = dummy.fireImmune() ? "§2Tak" : "§cNie";
+            Component fireVal = dummy.fireImmune() ? Component.translatable("gui.r3ct_bestiary.details.yes").withStyle(ChatFormatting.DARK_GREEN) : Component.translatable("gui.r3ct_bestiary.details.no").withStyle(ChatFormatting.RED);
+
             String kbStr = "0%";
             var kbAttr = dummy.getAttribute(net.minecraft.world.entity.ai.attributes.Attributes.KNOCKBACK_RESISTANCE);
             if (kbAttr != null) kbStr = ((int) Math.round(kbAttr.getValue() * 100)) + "%";
 
-            guiGraphics.text(this.font, "§7Ogień: " + fireStr, textX, currentY, 0xFFFFFFFF, false); currentY += 10;
-            guiGraphics.text(this.font, "§7Odrzut: §5" + kbStr, textX, currentY, 0xFFFFFFFF, false);
+            Component fireComp = Component.translatable("gui.r3ct_bestiary.details.fire").withStyle(ChatFormatting.GRAY).append(fireVal);
+            guiGraphics.text(this.font, fireComp, textX, currentY, 0xFFFFFFFF, false); currentY += 10;
+
+            Component kbComp = Component.translatable("gui.r3ct_bestiary.details.knockback").withStyle(ChatFormatting.GRAY).append(Component.literal(kbStr).withStyle(ChatFormatting.DARK_PURPLE));
+            guiGraphics.text(this.font, kbComp, textX, currentY, 0xFFFFFFFF, false);
         } else {
-            guiGraphics.text(this.font, "§7Ogień: §6?", textX, currentY, 0xFFFFFFFF, false); currentY += 10;
-            guiGraphics.text(this.font, "§7Odrzut: §6?", textX, currentY, 0xFFFFFFFF, false);
+            Component fireUnk = Component.translatable("gui.r3ct_bestiary.details.fire").withStyle(ChatFormatting.GRAY).append(Component.literal("?").withStyle(ChatFormatting.GOLD));
+            Component kbUnk = Component.translatable("gui.r3ct_bestiary.details.knockback").withStyle(ChatFormatting.GRAY).append(Component.literal("?").withStyle(ChatFormatting.GOLD));
+
+            guiGraphics.text(this.font, fireUnk, textX, currentY, 0xFFFFFFFF, false); currentY += 10;
+            guiGraphics.text(this.font, kbUnk, textX, currentY, 0xFFFFFFFF, false);
         }
 
         currentY += 10;
@@ -862,12 +939,11 @@ public class BestiaryScreen extends Screen {
         guiGraphics.pose().popMatrix();
         guiGraphics.disableScissor();
 
-        // Ustawiamy ile potrzebujemy wyjechać w dół żeby pokazać cały tekst
         maxDetailsScroll = Math.max(0, (currentY - listStartY) - listHeight);
     }
 
     private void updateScrollbar(double mouseY) {
-        int bookStartY = ((this.height - RENDER_SIZE) / 2); // Względny początek książki
+        int bookStartY = ((this.height - RENDER_SIZE) / 2);
 
         if (activeSpecialTab == SpecialTab.HOME) {
             int trackY = bookStartY + 47;
@@ -887,8 +963,8 @@ public class BestiaryScreen extends Screen {
                 currentRowScroll = Math.round(fraction * maxScroll);
             }
         } else if (activeSpecialTab == SpecialTab.DETAILS) {
-            int trackY = bookStartY + 135; // Zmieniono na nowy start (135)
-            int trackH = 80;               // Zmieniono na nową wysokość (80)
+            int trackY = bookStartY + 135;
+            int trackH = 80;
             if (maxDetailsScroll > 0) {
                 float fraction = Mth.clamp((float)(mouseY - trackY) / trackH, 0.0f, 1.0f);
                 detailsScroll = Math.round(fraction * maxDetailsScroll);
@@ -952,7 +1028,6 @@ public class BestiaryScreen extends Screen {
                 isScrolling = true; updateScrollbar(mouseY); return true;
             }
 
-            // Kliknięcie w moba na siatce - otwiera szczegóły
             EntityTypeScanner.CategoryData activeCat = cachedCategories.get(selectedTabIndex);
             List<String> items = activeCat.entityIds;
             int columns = 5;
@@ -979,7 +1054,6 @@ public class BestiaryScreen extends Screen {
             }
         } else if (activeSpecialTab == SpecialTab.DETAILS) {
             int trackX = bookStartX + 199;
-            // Sprawdzanie pozycji dostosowane do nowych wymiarów (Y: 135, H: 80)
             if (mouseX >= trackX - 2 && mouseX <= trackX + 6 && mouseY >= bookStartY + 135 && mouseY <= bookStartY + 135 + 80) {
                 isScrolling = true;
                 updateScrollbar(mouseY);
@@ -1028,13 +1102,12 @@ public class BestiaryScreen extends Screen {
             if (scrollY > 0 && currentRowScroll > 0) currentRowScroll--;
             else if (scrollY < 0 && currentRowScroll < maxScroll) currentRowScroll++;
         } else if (activeSpecialTab == SpecialTab.DETAILS) {
-        if (scrollY > 0 && detailsScroll > 0) detailsScroll -= 15; // Scroll w górę
-        else if (scrollY < 0 && detailsScroll < maxDetailsScroll) detailsScroll += 15; // Scroll w dół
+            if (scrollY > 0 && detailsScroll > 0) detailsScroll -= 15;
+            else if (scrollY < 0 && detailsScroll < maxDetailsScroll) detailsScroll += 15;
 
-        // Zabezpieczenie przed przekroczeniem limitów
-        detailsScroll = Mth.clamp(detailsScroll, 0, maxDetailsScroll);
-        return true;
-    }
+            detailsScroll = Mth.clamp(detailsScroll, 0, maxDetailsScroll);
+            return true;
+        }
 
         return true;
     }
@@ -1047,11 +1120,9 @@ public class BestiaryScreen extends Screen {
     @Override
     public void onClose() {
         if (activeSpecialTab == SpecialTab.DETAILS) {
-            // Wciśnięcie ESC w detalach po prostu cofa nas do siatki
             activeSpecialTab = SpecialTab.NONE;
             this.minecraft.getSoundManager().play(net.minecraft.client.resources.sounds.SimpleSoundInstance.forUI(net.minecraft.sounds.SoundEvents.UI_BUTTON_CLICK, 1.0F));
         } else {
-            // Wciśnięcie ESC w każdym innym miejscu zamyka okno
             super.onClose();
         }
     }
@@ -1059,7 +1130,7 @@ public class BestiaryScreen extends Screen {
     @Override
     public boolean keyPressed(net.minecraft.client.input.KeyEvent event) {
         if (com.r3ct.bestiary.platform.Services.PLATFORM.isCatalogKey(event)) {
-            super.onClose(); // Wymusza całkowite zamknięcie ekranu z pominięciem logiki "Wstecz"
+            super.onClose();
             return true;
         }
         return super.keyPressed(event);

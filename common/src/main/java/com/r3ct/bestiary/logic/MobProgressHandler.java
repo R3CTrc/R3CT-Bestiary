@@ -8,6 +8,7 @@ import com.r3ct.bestiary.platform.Services;
 import com.r3ct.bestiary.scanner.EntityTypeScanner;
 import net.minecraft.ChatFormatting;
 import net.minecraft.core.registries.BuiltInRegistries;
+import net.minecraft.network.chat.Component;
 import net.minecraft.resources.Identifier;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.EntityType;
@@ -99,15 +100,57 @@ public class MobProgressHandler {
         return totalValidKills;
     }
 
-    // --- DOSTĘPNE AKCJE (Wszystkie robią dokładnie to samo - dodają punkt postępu!) ---
     public static void handleMobKill(ServerPlayer player, EntityType<?> entityType) { handleProgress(player, entityType); }
     public static void handleMobBreed(ServerPlayer player, EntityType<?> entityType) { handleProgress(player, entityType); }
     public static void handleMobTame(ServerPlayer player, EntityType<?> entityType) { handleProgress(player, entityType); }
     public static void handleMobTrade(ServerPlayer player, EntityType<?> entityType) { handleProgress(player, entityType); }
     public static void handleMobBuild(ServerPlayer player, EntityType<?> entityType) { handleProgress(player, entityType); }
-    // ----------------------------------------------------------------------------------
+    public static void handleMobCure(ServerPlayer player, EntityType<?> entityType) { handleProgress(player, entityType); }
+    public static void handleMobShear(ServerPlayer player, EntityType<?> entityType) { handleProgress(player, entityType); }
+    public static void handleMobInteract(ServerPlayer player, EntityType<?> entityType) { handleProgress(player, entityType); }
 
-    // Główny silnik dodawania punktów
+    public static void handlePlayerRidingTick(ServerPlayer player) {
+        // Sprawdzamy, czy gracz jedzie na żywym stworzeniu (ignorujemy wagoniki i łódki, bo to nie moby)
+        if (player.getVehicle() instanceof net.minecraft.world.entity.LivingEntity mount) {
+
+            // Obliczamy wektory przesunięcia od poprzedniego ticku (1/20 sekundy temu)
+            double dx = player.getX() - player.xOld;
+            double dy = player.getY() - player.yOld;
+            double dz = player.getZ() - player.zOld;
+
+            // Twierdzenie Pitagorasa w 3D - dokładny dystans przebyty w tym ułamku sekundy
+            double distanceTraveled = Math.sqrt(dx * dx + dy * dy + dz * dz);
+
+            // Zabezpieczenie przed staniem w miejscu (żeby nie wywoływać niepotrzebnie zapisu danych)
+            if (distanceTraveled < 0.01) return;
+
+            PlayerData data = ModState.getPlayerData(player.level().getServer(), player.getUUID());
+            String entityId = BuiltInRegistries.ENTITY_TYPE.getKey(mount.getType()).toString();
+
+            // Pobieramy aktualnie nagromadzony dystans i dodajemy nowy "krok"
+            double currentDistance = data.rideDistances.getOrDefault(entityId, 0.0);
+            currentDistance += distanceTraveled;
+
+            double requiredDistance = BestiaryConfig.rideDistanceBlocks;
+            // Sprawdzamy, czy przekroczyliśmy magiczny próg 1000 bloków
+            if (currentDistance >= requiredDistance) {
+                // Udajemy, że gracz "wszedł w interakcję" z mobem, dając mu pełnoprawny punkt Bestiariusza!
+                handleProgress(player, mount.getType());
+
+                // Odejmujemy 1000 z puli, żeby zaczynał zbierać na kolejny poziom
+                currentDistance -= requiredDistance;
+            }
+
+            // Zapisujemy resztkę z powrotem do mapy
+            data.rideDistances.put(entityId, currentDistance);
+
+            // Zapisujemy do pliku tylko raz na 10 sekund (200 ticków), żeby nie zamęczyć dysku serwera
+            if (player.tickCount % 200 == 0) {
+                ModState.get(player.level().getServer()).setDirty();
+            }
+        }
+    }
+
     private static void handleProgress(ServerPlayer player, EntityType<?> entityType) {
         MobCategory category = entityType.getCategory();
         String entityId = BuiltInRegistries.ENTITY_TYPE.getKey(entityType).toString();
@@ -117,7 +160,6 @@ public class MobProgressHandler {
                 entityType == EntityType.SNOW_GOLEM ||
                 entityType == EntityType.COPPER_GOLEM);
 
-        // Jeśli to MISC, ale NIE JEST dozwolonym mobem i NIE JEST wpisane w configu - ignorujemy (np. strzały, łódki)
         if (category == MobCategory.MISC && !isAllowedMisc && !BestiaryConfig.mobCategoryOverrides.containsKey(entityId)) {
             return;
         }
@@ -141,7 +183,6 @@ public class MobProgressHandler {
 
         String bestiaryCat = getBestiaryCategory(entityId, category);
 
-        // POBIERAMY ODPOWIEDNIĄ TABLICĘ XP DLA TEJ KATEGORII
         List<Integer> xpThresholds;
         if (bestiaryCat.equals("bosses")) {
             xpThresholds = BestiaryConfig.xpBosses;
@@ -151,14 +192,13 @@ public class MobProgressHandler {
             xpThresholds = BestiaryConfig.xpCreatures;
         }
 
-        // BAZOWE UKOŃCZENIE
+        // BAZOWE UKOŃCZENIE (Pierwsza strona - 1/4)
         if (newKills == baseReq) {
             BestiaryConfig.load();
 
             int completedBefore = getCompletedMobsCount(data) - 1;
             int completedAfter = completedBefore + 1;
 
-            // Pobieramy pierwszy próg XP (indeks 0)
             int xpToGive = xpThresholds.size() > 0 ? xpThresholds.get(0) : 0;
             player.giveExperiencePoints(xpToGive);
 
@@ -166,13 +206,14 @@ public class MobProgressHandler {
                     net.minecraft.sounds.SoundEvents.PLAYER_LEVELUP,
                     net.minecraft.sounds.SoundSource.PLAYERS, 1.0F, 1.0F);
 
-            var prefix = net.minecraft.network.chat.Component.literal("[Bestiary] ").withStyle(net.minecraft.ChatFormatting.AQUA);
-            var mobNameComp = entityType.getDescription().copy().withStyle(net.minecraft.ChatFormatting.YELLOW);
+            // Ujednolicony czerwony prefix
+            var prefix = Component.literal("[Bestiary] ").withStyle(ChatFormatting.RED);
+            var mobNameComp = entityType.getDescription().copy().withStyle(ChatFormatting.YELLOW);
 
             player.sendSystemMessage(
-                    net.minecraft.network.chat.Component.empty()
+                    Component.empty()
                             .append(prefix)
-                            .append(net.minecraft.network.chat.Component.translatable("chat.r3ct_bestiary.mob_completed", mobNameComp).withStyle(net.minecraft.ChatFormatting.GREEN))
+                            .append(Component.translatable("chat.r3ct_bestiary.mob_completed", mobNameComp).withStyle(ChatFormatting.GREEN))
             );
 
             if (completedAfter >= 1) grantAdvancement(player, "r3ct_bestiary:first_kill");
@@ -196,40 +237,38 @@ public class MobProgressHandler {
                                 net.minecraft.sounds.SoundEvents.FIREWORK_ROCKET_TWINKLE,
                                 net.minecraft.sounds.SoundSource.PLAYERS, 1.0F, 1.0F);
 
-                        net.minecraft.ChatFormatting rewardColor = ChatFormatting.AQUA;
+                        ChatFormatting rewardColor = ChatFormatting.AQUA;
                         if (reward.color != null && reward.color.length() >= 2 && reward.color.startsWith("&")) {
-                            net.minecraft.ChatFormatting parsedColor = net.minecraft.ChatFormatting.getByCode(reward.color.charAt(1));
-                            if (parsedColor != null) {
-                                rewardColor = parsedColor;
-                            }
+                            ChatFormatting parsedColor = ChatFormatting.getByCode(reward.color.charAt(1));
+                            if (parsedColor != null) rewardColor = parsedColor;
                         }
 
-                        var rewardPrefix = net.minecraft.network.chat.Component.literal("[Bestiary] ").withStyle(net.minecraft.ChatFormatting.RED);
-                        var numberComp = net.minecraft.network.chat.Component.literal(String.valueOf(completedAfter)).withStyle(net.minecraft.ChatFormatting.YELLOW);
-                        var rewardComp = net.minecraft.network.chat.Component.literal(amount + "x ")
+                        var rewardPrefix = Component.literal("[Bestiary] ").withStyle(ChatFormatting.RED);
+                        var numberComp = Component.literal(String.valueOf(completedAfter)).withStyle(ChatFormatting.YELLOW);
+                        var rewardComp = Component.literal(amount + "x ")
                                 .withStyle(rewardColor)
                                 .append(savedItemName.withStyle(rewardColor));
 
                         player.sendSystemMessage(
-                                net.minecraft.network.chat.Component.empty()
+                                Component.empty()
                                         .append(rewardPrefix)
-                                        .append(net.minecraft.network.chat.Component.translatable("chat.r3ct_bestiary.milestone_reward", numberComp, rewardComp).withStyle(net.minecraft.ChatFormatting.GREEN))
+                                        .append(Component.translatable("chat.r3ct_bestiary.milestone_reward", numberComp, rewardComp).withStyle(ChatFormatting.GREEN))
                         );
                     }
                 }
             }
             checkAndAwardCompletedCategories(player, data);
         }
-        // GWIAZDKI MISTRZOSTWA (Indeksy 1, 2, 3)
+        // KOLEJNE STRONY (2, 3, 4)
         else if (newKills == star1Req) {
             int xpToGive = xpThresholds.size() > 1 ? xpThresholds.get(1) : 0;
-            handleStarUnlock(player, entityType, 1, xpToGive);
+            handlePageUnlock(player, entityType, 2, xpToGive); // Strona 2
         } else if (newKills == star2Req) {
             int xpToGive = xpThresholds.size() > 2 ? xpThresholds.get(2) : 0;
-            handleStarUnlock(player, entityType, 2, xpToGive);
+            handlePageUnlock(player, entityType, 3, xpToGive); // Strona 3
         } else if (newKills == star3Req) {
             int xpToGive = xpThresholds.size() > 3 ? xpThresholds.get(3) : 0;
-            handleStarUnlock(player, entityType, 3, xpToGive);
+            handlePageUnlock(player, entityType, 4, xpToGive); // Strona 4
         }
 
         ModState.get(player.level().getServer()).setDirty();
@@ -237,23 +276,22 @@ public class MobProgressHandler {
         handleLeaderboardRequest(player);
     }
 
-    private static void handleStarUnlock(ServerPlayer player, EntityType<?> entityType, int starLevel, int xpReward) {
+    // Nowa metoda obsługująca Strony zamiast Gwiazdek
+    private static void handlePageUnlock(ServerPlayer player, EntityType<?> entityType, int pageNumber, int xpReward) {
         player.giveExperiencePoints(xpReward);
 
         player.level().playSound(null, player.blockPosition(),
                 net.minecraft.sounds.SoundEvents.UI_TOAST_CHALLENGE_COMPLETE,
                 net.minecraft.sounds.SoundSource.PLAYERS, 1.0F, 1.0F);
 
-        var prefix = net.minecraft.network.chat.Component.literal("[Bestiary] ").withStyle(net.minecraft.ChatFormatting.GOLD);
-        var mobNameComp = entityType.getDescription().copy().withStyle(net.minecraft.ChatFormatting.YELLOW);
-
-        String stars = "★".repeat(starLevel);
-        var starComp = net.minecraft.network.chat.Component.literal(" " + stars).withStyle(net.minecraft.ChatFormatting.GOLD);
+        var prefix = Component.literal("[Bestiary] ").withStyle(ChatFormatting.RED);
+        var mobNameComp = entityType.getDescription().copy().withStyle(ChatFormatting.YELLOW);
+        var pageNumComp = Component.literal(String.valueOf(pageNumber)).withStyle(ChatFormatting.GOLD);
 
         player.sendSystemMessage(
-                net.minecraft.network.chat.Component.empty()
+                Component.empty()
                         .append(prefix)
-                        .append(net.minecraft.network.chat.Component.translatable("chat.r3ct_bestiary.star_unlocked", mobNameComp, starComp).withStyle(net.minecraft.ChatFormatting.YELLOW))
+                        .append(Component.translatable("chat.r3ct_bestiary.page_unlocked", pageNumComp, mobNameComp).withStyle(ChatFormatting.GREEN))
         );
     }
 
@@ -321,24 +359,24 @@ public class MobProgressHandler {
             if (rewardItem != Items.AIR) {
                 ItemStack rewardStack = new ItemStack(rewardItem, 1);
 
-                net.minecraft.network.chat.MutableComponent customName = net.minecraft.network.chat.Component.literal(player.getName().getString())
-                        .withStyle(net.minecraft.ChatFormatting.AQUA)
-                        .append(net.minecraft.network.chat.Component.literal(" - ").withStyle(net.minecraft.ChatFormatting.LIGHT_PURPLE))
-                        .append(net.minecraft.network.chat.Component.translatable(rewardItem.getDescriptionId()).withStyle(net.minecraft.ChatFormatting.LIGHT_PURPLE));
+                net.minecraft.network.chat.MutableComponent customName = Component.literal(player.getName().getString())
+                        .withStyle(ChatFormatting.AQUA)
+                        .append(Component.literal(" - ").withStyle(ChatFormatting.LIGHT_PURPLE))
+                        .append(Component.translatable(rewardItem.getDescriptionId()).withStyle(ChatFormatting.LIGHT_PURPLE));
 
                 rewardStack.set(net.minecraft.core.component.DataComponents.CUSTOM_NAME, customName);
                 var savedTrophyName = rewardStack.getHoverName().copy();
 
                 giveItemToPlayer(player, rewardStack);
 
-                var prefix = net.minecraft.network.chat.Component.literal("[Bestiary] ").withStyle(net.minecraft.ChatFormatting.RED);
-                var catNameComp = net.minecraft.network.chat.Component.literal(categoryId.toUpperCase()).withStyle(net.minecraft.ChatFormatting.YELLOW);
-                var trophyComp = savedTrophyName.withStyle(net.minecraft.ChatFormatting.LIGHT_PURPLE);
+                var prefix = Component.literal("[Bestiary] ").withStyle(ChatFormatting.RED);
+                var catNameComp = Component.literal(categoryId.toUpperCase()).withStyle(ChatFormatting.YELLOW);
+                var trophyComp = savedTrophyName.withStyle(ChatFormatting.LIGHT_PURPLE);
 
                 player.sendSystemMessage(
-                        net.minecraft.network.chat.Component.empty()
+                        Component.empty()
                                 .append(prefix)
-                                .append(net.minecraft.network.chat.Component.translatable("chat.r3ct_bestiary.category_complete", catNameComp, trophyComp).withStyle(net.minecraft.ChatFormatting.GREEN))
+                                .append(Component.translatable("chat.r3ct_bestiary.category_complete", catNameComp, trophyComp).withStyle(ChatFormatting.GREEN))
                 );
 
                 data.rewardedCategories.add(categoryId);
@@ -383,5 +421,16 @@ public class MobProgressHandler {
             ItemEntity drop = player.drop(stack, false);
             if (drop != null) drop.setNoPickUpDelay();
         }
+    }
+
+    public static boolean tryApplyCooldown(net.minecraft.world.entity.Mob mob, long cooldownMs) {
+        if (mob instanceof com.r3ct.bestiary.util.IResearchCooldown cooldownEntity) {
+            long currentTime = System.currentTimeMillis();
+            if (currentTime - cooldownEntity.r3ct_getLastResearchTime() >= cooldownMs) {
+                cooldownEntity.r3ct_setLastResearchTime(currentTime);
+                return true;
+            }
+        }
+        return false;
     }
 }

@@ -15,6 +15,7 @@ public class PlayerData {
     public String lastKnownName = "Unknown";
     public Map<String, Integer> killCounts = new HashMap<>();
     public Set<String> rewardedCategories = new HashSet<>();
+    public Map<String, Double> rideDistances = new HashMap<>();
 
     public boolean receivedMigrationRefund = false;
 

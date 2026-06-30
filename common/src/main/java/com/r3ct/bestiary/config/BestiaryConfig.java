@@ -27,6 +27,9 @@ public class BestiaryConfig {
 
     public static Map<String, List<Integer>> customProgressRequirements = new HashMap<>();
 
+    public static int interactionCooldownMinutes = 30;
+    public static int rideDistanceBlocks = 500;
+
     public static float catalogScale = 1.0f;
 
     // NOWOŚĆ: Pule nagród XP zamienione na Listy [Baza, ★, ★★, ★★★]
@@ -113,6 +116,9 @@ public class BestiaryConfig {
                 if (data.defaultProgressMonsters != null && !data.defaultProgressMonsters.isEmpty()) defaultProgressMonsters = data.defaultProgressMonsters;
                 if (data.defaultProgressCreatures != null && !data.defaultProgressCreatures.isEmpty()) defaultProgressCreatures = data.defaultProgressCreatures;
                 if (data.customProgressRequirements != null) customProgressRequirements = data.customProgressRequirements;
+
+                interactionCooldownMinutes = data.interactionCooldownMinutes;
+                rideDistanceBlocks = data.rideDistanceBlocks;
             }
         } catch (Exception e) { System.err.println("[R3CT-Bestiary] Error loading mobs config!"); }
 
@@ -174,6 +180,8 @@ public class BestiaryConfig {
         List<Integer> defaultProgressMonsters = BestiaryConfig.defaultProgressMonsters;
         List<Integer> defaultProgressCreatures = BestiaryConfig.defaultProgressCreatures;
         Map<String, List<Integer>> customProgressRequirements = BestiaryConfig.customProgressRequirements;
+        int interactionCooldownMinutes = BestiaryConfig.interactionCooldownMinutes;
+        int rideDistanceBlocks = BestiaryConfig.rideDistanceBlocks;
     }
 
     private static class ClientData {
