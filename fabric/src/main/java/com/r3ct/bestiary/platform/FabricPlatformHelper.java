@@ -52,4 +52,9 @@ public class FabricPlatformHelper implements IPlatformHelper {
         }
         return false;
     }
+
+    @Override
+    public void sendSetTrophyEntityPacket(net.minecraft.core.BlockPos pos, String entityId) {
+        net.fabricmc.fabric.api.client.networking.v1.ClientPlayNetworking.send(new com.r3ct.bestiary.network.SetTrophyEntityPayload(pos, entityId));
+    }
 }

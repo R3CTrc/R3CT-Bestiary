@@ -1,8 +1,0 @@
-{
-  "variants": {
-    "facing=north": { "model": "r3ct_collection:block/trophy_combat" },
-    "facing=east":  { "model": "r3ct_collection:block/trophy_combat", "y": 90 },
-    "facing=south": { "model": "r3ct_collection:block/trophy_combat", "y": 180 },
-    "facing=west":  { "model": "r3ct_collection:block/trophy_combat", "y": 270 }
-  }
-}

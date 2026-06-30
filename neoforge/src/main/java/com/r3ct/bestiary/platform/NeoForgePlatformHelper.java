@@ -53,4 +53,9 @@ public class NeoForgePlatformHelper implements IPlatformHelper {
         }
         return false;
     }
+
+    @Override
+    public void sendSetTrophyEntityPacket(net.minecraft.core.BlockPos pos, String entityId) {
+        net.neoforged.neoforge.client.network.ClientPacketDistributor.sendToServer(new com.r3ct.bestiary.network.SetTrophyEntityPayload(pos, entityId));
+    }
 }

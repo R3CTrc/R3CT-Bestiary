@@ -72,6 +72,21 @@ public class BestiaryNeoForge {
                     BestiaryConfig.syncFromServer(payload.mobsJson(), payload.rewardsJson());
                 })
         );
+        registrar.playToServer(
+                com.r3ct.bestiary.network.SetTrophyEntityPayload.TYPE, com.r3ct.bestiary.network.SetTrophyEntityPayload.CODEC,
+                (payload, context) -> context.enqueueWork(() -> {
+                    net.minecraft.world.entity.player.Player player = context.player();
+                    if (player.level().isLoaded(payload.pos()) && player.distanceToSqr(net.minecraft.world.phys.Vec3.atCenterOf(payload.pos())) < 64.0) {
+                        net.minecraft.world.level.block.entity.BlockEntity be = player.level().getBlockEntity(payload.pos());
+                        if (be instanceof com.r3ct.bestiary.block.TrophyBlockEntity tbe) {
+                            if (tbe.getEntityList().contains(payload.entityId())) {
+                                tbe.setDisplayEntityId(payload.entityId());
+                                player.level().playSound(null, payload.pos(), net.minecraft.sounds.SoundEvents.UI_BUTTON_CLICK.value(), net.minecraft.sounds.SoundSource.BLOCKS, 0.5f, 1.2f);
+                            }
+                        }
+                    }
+                })
+        );
     }
 
     private void onPlayerJoin(PlayerEvent.PlayerLoggedInEvent event) {
@@ -98,39 +113,20 @@ public class BestiaryNeoForge {
             )));
         };
 
-        registerTrophy.accept("trophy_building", ModBlocks.TROPHY_BUILDING);
-        registerTrophy.accept("trophy_combat", ModBlocks.TROPHY_COMBAT);
-        registerTrophy.accept("trophy_tools", ModBlocks.TROPHY_TOOLS);
-        registerTrophy.accept("trophy_food", ModBlocks.TROPHY_FOOD);
-        registerTrophy.accept("trophy_redstone", ModBlocks.TROPHY_REDSTONE);
-        registerTrophy.accept("trophy_ingredients", ModBlocks.TROPHY_INGREDIENTS);
-        registerTrophy.accept("trophy_natural", ModBlocks.TROPHY_NATURAL);
-        registerTrophy.accept("trophy_colored", ModBlocks.TROPHY_COLORED);
-        registerTrophy.accept("trophy_egg", ModBlocks.TROPHY_EGG);
-        registerTrophy.accept("trophy_functional", ModBlocks.TROPHY_FUNCTIONAL);
-        registerTrophy.accept("trophy_mod", ModBlocks.TROPHY_MOD);
+        // Zarejestrowanie tylko JEDNEGO, uniwersalnego trofeum
+        registerTrophy.accept("trophy", ModBlocks.TROPHY);
 
         event.register(BuiltInRegistries.BLOCK_ENTITY_TYPE.key(), helper -> {
-            helper.register(Identifier.parse(Constants.MOD_ID + ":trophy_building_be"), ModBlocks.TROPHY_BE_TYPE);
+            helper.register(Identifier.parse(Constants.MOD_ID + ":trophy_be"), ModBlocks.TROPHY_BE_TYPE);
         });
 
         event.register(Registries.CREATIVE_MODE_TAB, helper -> {
             helper.register(Identifier.parse(Constants.MOD_ID + ":main_tab"),
                     net.minecraft.world.item.CreativeModeTab.builder()
                             .title(net.minecraft.network.chat.Component.translatable("itemGroup." + Constants.MOD_ID + ".main_tab"))
-                            .icon(() -> new net.minecraft.world.item.ItemStack(ModBlocks.TROPHY_BUILDING))
+                            .icon(() -> new net.minecraft.world.item.ItemStack(ModBlocks.TROPHY))
                             .displayItems((context, output) -> {
-                                output.accept(ModBlocks.TROPHY_BUILDING);
-                                output.accept(ModBlocks.TROPHY_NATURAL);
-                                output.accept(ModBlocks.TROPHY_COLORED);
-                                output.accept(ModBlocks.TROPHY_COMBAT);
-                                output.accept(ModBlocks.TROPHY_TOOLS);
-                                output.accept(ModBlocks.TROPHY_REDSTONE);
-                                output.accept(ModBlocks.TROPHY_FUNCTIONAL);
-                                output.accept(ModBlocks.TROPHY_FOOD);
-                                output.accept(ModBlocks.TROPHY_INGREDIENTS);
-                                output.accept(ModBlocks.TROPHY_EGG);
-                                output.accept(ModBlocks.TROPHY_MOD);
+                                output.accept(ModBlocks.TROPHY); // Tylko jedno trofeum w zakładce
                             })
                             .build()
             );

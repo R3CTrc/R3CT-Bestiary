@@ -61,5 +61,10 @@ public class BestiaryClientFabric implements ClientModInitializer {
         net.fabricmc.fabric.api.client.networking.v1.ClientPlayConnectionEvents.DISCONNECT.register((handler, client) -> {
             com.r3ct.bestiary.config.BestiaryConfig.load();
         });
+
+        net.fabricmc.fabric.api.client.rendering.v1.BlockEntityRendererRegistry.register(
+                com.r3ct.bestiary.block.ModBlocks.TROPHY_BE_TYPE,
+                com.r3ct.bestiary.client.render.TrophyBlockEntityRenderer::new
+        );
     }
 }

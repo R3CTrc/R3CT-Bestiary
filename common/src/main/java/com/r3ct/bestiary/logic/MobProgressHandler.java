@@ -6,8 +6,11 @@ import com.r3ct.bestiary.data.PlayerData;
 import com.r3ct.bestiary.network.LeaderboardDataPayload;
 import com.r3ct.bestiary.platform.Services;
 import com.r3ct.bestiary.scanner.EntityTypeScanner;
+import com.r3ct.bestiary.block.ModBlocks;
 import net.minecraft.ChatFormatting;
 import net.minecraft.core.registries.BuiltInRegistries;
+import net.minecraft.core.component.DataComponents;
+import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.Identifier;
 import net.minecraft.server.level.ServerPlayer;
@@ -17,6 +20,7 @@ import net.minecraft.world.entity.item.ItemEntity;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
+import net.minecraft.world.item.component.CustomData;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -51,18 +55,18 @@ public class MobProgressHandler {
     }
 
     public static List<Integer> getProgressThresholds(String entityId, MobCategory category) {
-        if (com.r3ct.bestiary.config.BestiaryConfig.customProgressRequirements.containsKey(entityId)) {
-            return com.r3ct.bestiary.config.BestiaryConfig.customProgressRequirements.get(entityId);
+        if (BestiaryConfig.customProgressRequirements.containsKey(entityId)) {
+            return BestiaryConfig.customProgressRequirements.get(entityId);
         }
 
         String bestiaryCat = getBestiaryCategory(entityId, category);
 
         if (bestiaryCat.equals("bosses")) {
-            return com.r3ct.bestiary.config.BestiaryConfig.defaultProgressBosses;
+            return BestiaryConfig.defaultProgressBosses;
         } else if (bestiaryCat.equals("creatures")) {
-            return com.r3ct.bestiary.config.BestiaryConfig.defaultProgressCreatures;
+            return BestiaryConfig.defaultProgressCreatures;
         }
-        return com.r3ct.bestiary.config.BestiaryConfig.defaultProgressMonsters;
+        return BestiaryConfig.defaultProgressMonsters;
     }
 
     public static int getCompletedMobsCount(PlayerData data) {
@@ -110,41 +114,28 @@ public class MobProgressHandler {
     public static void handleMobInteract(ServerPlayer player, EntityType<?> entityType) { handleProgress(player, entityType); }
 
     public static void handlePlayerRidingTick(ServerPlayer player) {
-        // Sprawdzamy, czy gracz jedzie na żywym stworzeniu (ignorujemy wagoniki i łódki, bo to nie moby)
         if (player.getVehicle() instanceof net.minecraft.world.entity.LivingEntity mount) {
-
-            // Obliczamy wektory przesunięcia od poprzedniego ticku (1/20 sekundy temu)
             double dx = player.getX() - player.xOld;
             double dy = player.getY() - player.yOld;
             double dz = player.getZ() - player.zOld;
-
-            // Twierdzenie Pitagorasa w 3D - dokładny dystans przebyty w tym ułamku sekundy
             double distanceTraveled = Math.sqrt(dx * dx + dy * dy + dz * dz);
 
-            // Zabezpieczenie przed staniem w miejscu (żeby nie wywoływać niepotrzebnie zapisu danych)
             if (distanceTraveled < 0.01) return;
 
             PlayerData data = ModState.getPlayerData(player.level().getServer(), player.getUUID());
             String entityId = BuiltInRegistries.ENTITY_TYPE.getKey(mount.getType()).toString();
 
-            // Pobieramy aktualnie nagromadzony dystans i dodajemy nowy "krok"
             double currentDistance = data.rideDistances.getOrDefault(entityId, 0.0);
             currentDistance += distanceTraveled;
 
             double requiredDistance = BestiaryConfig.rideDistanceBlocks;
-            // Sprawdzamy, czy przekroczyliśmy magiczny próg 1000 bloków
             if (currentDistance >= requiredDistance) {
-                // Udajemy, że gracz "wszedł w interakcję" z mobem, dając mu pełnoprawny punkt Bestiariusza!
                 handleProgress(player, mount.getType());
-
-                // Odejmujemy 1000 z puli, żeby zaczynał zbierać na kolejny poziom
                 currentDistance -= requiredDistance;
             }
 
-            // Zapisujemy resztkę z powrotem do mapy
             data.rideDistances.put(entityId, currentDistance);
 
-            // Zapisujemy do pliku tylko raz na 10 sekund (200 ticków), żeby nie zamęczyć dysku serwera
             if (player.tickCount % 200 == 0) {
                 ModState.get(player.level().getServer()).setDirty();
             }
@@ -192,7 +183,6 @@ public class MobProgressHandler {
             xpThresholds = BestiaryConfig.xpCreatures;
         }
 
-        // BAZOWE UKOŃCZENIE (Pierwsza strona - 1/4)
         if (newKills == baseReq) {
             BestiaryConfig.load();
 
@@ -206,7 +196,6 @@ public class MobProgressHandler {
                     net.minecraft.sounds.SoundEvents.PLAYER_LEVELUP,
                     net.minecraft.sounds.SoundSource.PLAYERS, 1.0F, 1.0F);
 
-            // Ujednolicony czerwony prefix
             var prefix = Component.literal("[Bestiary] ").withStyle(ChatFormatting.RED);
             var mobNameComp = entityType.getDescription().copy().withStyle(ChatFormatting.YELLOW);
 
@@ -259,16 +248,15 @@ public class MobProgressHandler {
             }
             checkAndAwardCompletedCategories(player, data);
         }
-        // KOLEJNE STRONY (2, 3, 4)
         else if (newKills == star1Req) {
             int xpToGive = xpThresholds.size() > 1 ? xpThresholds.get(1) : 0;
-            handlePageUnlock(player, entityType, 2, xpToGive); // Strona 2
+            handlePageUnlock(player, entityType, 2, xpToGive);
         } else if (newKills == star2Req) {
             int xpToGive = xpThresholds.size() > 2 ? xpThresholds.get(2) : 0;
-            handlePageUnlock(player, entityType, 3, xpToGive); // Strona 3
+            handlePageUnlock(player, entityType, 3, xpToGive);
         } else if (newKills == star3Req) {
             int xpToGive = xpThresholds.size() > 3 ? xpThresholds.get(3) : 0;
-            handlePageUnlock(player, entityType, 4, xpToGive); // Strona 4
+            handlePageUnlock(player, entityType, 4, xpToGive);
         }
 
         ModState.get(player.level().getServer()).setDirty();
@@ -276,7 +264,6 @@ public class MobProgressHandler {
         handleLeaderboardRequest(player);
     }
 
-    // Nowa metoda obsługująca Strony zamiast Gwiazdek
     private static void handlePageUnlock(ServerPlayer player, EntityType<?> entityType, int pageNumber, int xpReward) {
         player.giveExperiencePoints(xpReward);
 
@@ -338,6 +325,27 @@ public class MobProgressHandler {
         }
     }
 
+    public static ItemStack createCategoryTrophy(ServerPlayer player, String displayEntityRegistryName, List<String> allCategoryEntities, Component customTitle) {
+        ItemStack trophyStack = new ItemStack(ModBlocks.TROPHY);
+        trophyStack.set(DataComponents.CUSTOM_NAME, customTitle);
+
+        CompoundTag tag = new CompoundTag();
+        tag.putString("DisplayEntity", displayEntityRegistryName);
+        tag.putString("OwnerName", player.getScoreboardName());
+
+        // Zapisujemy całą listę mobów do NBT jako ListTag!
+        net.minecraft.nbt.ListTag entityListTag = new net.minecraft.nbt.ListTag();
+        if (allCategoryEntities != null) {
+            for (String entityId : allCategoryEntities) {
+                entityListTag.add(net.minecraft.nbt.StringTag.valueOf(entityId));
+            }
+        }
+        tag.put("EntityList", entityListTag);
+
+        trophyStack.set(DataComponents.CUSTOM_DATA, CustomData.of(tag));
+        return trophyStack;
+    }
+
     public static void handleCategoryReward(ServerPlayer player, String categoryId) {
         PlayerData data = ModState.getPlayerData(player.level().getServer(), player.getUUID());
         data.lastKnownName = player.getName().getString();
@@ -351,46 +359,46 @@ public class MobProgressHandler {
             return;
         }
 
-        BestiaryConfig.load();
-        String rewardItemId = BestiaryConfig.categoryRewards.getOrDefault(categoryId, BestiaryConfig.categoryRewards.get("modded_generic"));
-
-        if (rewardItemId != null) {
-            Item rewardItem = BuiltInRegistries.ITEM.get(Identifier.parse(rewardItemId)).map(net.minecraft.core.Holder::value).orElse(Items.AIR);
-            if (rewardItem != Items.AIR) {
-                ItemStack rewardStack = new ItemStack(rewardItem, 1);
-
-                net.minecraft.network.chat.MutableComponent customName = Component.literal(player.getName().getString())
-                        .withStyle(ChatFormatting.AQUA)
-                        .append(Component.literal(" - ").withStyle(ChatFormatting.LIGHT_PURPLE))
-                        .append(Component.translatable(rewardItem.getDescriptionId()).withStyle(ChatFormatting.LIGHT_PURPLE));
-
-                rewardStack.set(net.minecraft.core.component.DataComponents.CUSTOM_NAME, customName);
-                var savedTrophyName = rewardStack.getHoverName().copy();
-
-                giveItemToPlayer(player, rewardStack);
-
-                var prefix = Component.literal("[Bestiary] ").withStyle(ChatFormatting.RED);
-                var catNameComp = Component.literal(categoryId.toUpperCase()).withStyle(ChatFormatting.YELLOW);
-                var trophyComp = savedTrophyName.withStyle(ChatFormatting.LIGHT_PURPLE);
-
-                player.sendSystemMessage(
-                        Component.empty()
-                                .append(prefix)
-                                .append(Component.translatable("chat.r3ct_bestiary.category_complete", catNameComp, trophyComp).withStyle(ChatFormatting.GREEN))
-                );
-
-                data.rewardedCategories.add(categoryId);
-
-                int catSize = data.rewardedCategories.size();
-                if (data.rewardedCategories.contains("ALL_COMPLETED")) catSize--;
-
-                if (catSize >= 1) grantAdvancement(player, "r3ct_bestiary:category_1");
-                if (catSize >= 5) grantAdvancement(player, "r3ct_bestiary:category_5");
-
-                ModState.get(player.level().getServer()).setDirty();
-                Services.PLATFORM.sendSyncDataPacketToClient(player, data.killCounts, data.rewardedCategories);
-            }
+        // Automatyczny dobór ikonki dla kategorii (Zamiast pliku konfiguracyjnego)
+        String displayEntityId = "minecraft:pig";
+        List<String> allEntitiesInCat = new ArrayList<>();
+        com.r3ct.bestiary.scanner.EntityTypeScanner.CategoryData catData = com.r3ct.bestiary.scanner.EntityTypeScanner.SCANNED_CATEGORIES.get(categoryId);
+        if (catData != null && !catData.entityIds.isEmpty()) {
+            displayEntityId = catData.entityIds.get(0);
+            allEntitiesInCat = catData.entityIds; // Przekazujemy całą listę!
         }
+
+        net.minecraft.network.chat.MutableComponent customName = Component.literal(player.getName().getString())
+                .withStyle(ChatFormatting.AQUA)
+                .append(Component.literal(" - ").withStyle(ChatFormatting.LIGHT_PURPLE))
+                .append(Component.literal("Trofeum: " + categoryId.toUpperCase()).withStyle(ChatFormatting.LIGHT_PURPLE));
+
+        // Generujemy trofeum z zapisaną encją
+        ItemStack rewardStack = createCategoryTrophy(player, displayEntityId, allEntitiesInCat, customName);
+        var savedTrophyName = rewardStack.getHoverName().copy();
+
+        giveItemToPlayer(player, rewardStack);
+
+        var prefix = Component.literal("[Bestiary] ").withStyle(ChatFormatting.RED);
+        var catNameComp = Component.literal(categoryId.toUpperCase()).withStyle(ChatFormatting.YELLOW);
+        var trophyComp = savedTrophyName.withStyle(ChatFormatting.LIGHT_PURPLE);
+
+        player.sendSystemMessage(
+                Component.empty()
+                        .append(prefix)
+                        .append(Component.translatable("chat.r3ct_bestiary.category_complete", catNameComp, trophyComp).withStyle(ChatFormatting.GREEN))
+        );
+
+        data.rewardedCategories.add(categoryId);
+
+        int catSize = data.rewardedCategories.size();
+        if (data.rewardedCategories.contains("ALL_COMPLETED")) catSize--;
+
+        if (catSize >= 1) grantAdvancement(player, "r3ct_bestiary:category_1");
+        if (catSize >= 5) grantAdvancement(player, "r3ct_bestiary:category_5");
+
+        ModState.get(player.level().getServer()).setDirty();
+        Services.PLATFORM.sendSyncDataPacketToClient(player, data.killCounts, data.rewardedCategories);
     }
 
     public static void handleLeaderboardRequest(ServerPlayer player) {

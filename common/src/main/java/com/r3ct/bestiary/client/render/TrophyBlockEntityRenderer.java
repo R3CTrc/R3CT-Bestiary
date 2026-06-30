@@ -1,0 +1,140 @@
+package com.r3ct.bestiary.client.render;
+
+import com.mojang.blaze3d.vertex.PoseStack;
+import com.mojang.math.Axis;
+import com.r3ct.bestiary.block.TrophyBlock;
+import com.r3ct.bestiary.block.TrophyBlockEntity;
+import net.minecraft.client.gui.Font;
+import net.minecraft.client.renderer.SubmitNodeCollector;
+import net.minecraft.client.renderer.blockentity.BlockEntityRenderer;
+import net.minecraft.client.renderer.blockentity.BlockEntityRendererProvider;
+import net.minecraft.client.renderer.blockentity.state.BlockEntityRenderState;
+import net.minecraft.client.renderer.entity.EntityRenderDispatcher;
+import net.minecraft.client.renderer.entity.state.EntityRenderState;
+import net.minecraft.client.renderer.feature.ModelFeatureRenderer;
+import net.minecraft.client.renderer.state.level.CameraRenderState;
+import net.minecraft.core.Direction;
+import net.minecraft.network.chat.Component;
+import net.minecraft.util.FormattedCharSequence;
+import net.minecraft.world.entity.Entity;
+import net.minecraft.world.level.block.state.properties.AttachFace;
+import net.minecraft.world.phys.Vec3;
+import org.jspecify.annotations.Nullable;
+
+public class TrophyBlockEntityRenderer implements BlockEntityRenderer<TrophyBlockEntity, TrophyBlockEntityRenderer.TrophyRenderState> {
+
+    private final EntityRenderDispatcher entityRenderer;
+    private final Font font;
+
+    public TrophyBlockEntityRenderer(BlockEntityRendererProvider.Context context) {
+        // Zmieniono z context.entityRenderDispatcher() na poprawny akcesor rekordu: context.entityRenderer()
+        this.entityRenderer = context.entityRenderer();
+        this.font = context.font();
+    }
+
+    @Override
+    public TrophyRenderState createRenderState() {
+        return new TrophyRenderState();
+    }
+
+    @Override
+    public void extractRenderState(TrophyBlockEntity blockEntity, TrophyRenderState state, float partialTicks, Vec3 cameraPosition, ModelFeatureRenderer.@Nullable CrumblingOverlay breakProgress) {
+        BlockEntityRenderer.super.extractRenderState(blockEntity, state, partialTicks, cameraPosition, breakProgress);
+
+        state.facing = blockEntity.getBlockState().getValue(TrophyBlock.FACING);
+        state.isWall = blockEntity.getBlockState().getValue(TrophyBlock.FACE) == AttachFace.WALL;
+
+        String ownerName = blockEntity.getOwnerName();
+        if (ownerName != null && !ownerName.isEmpty()) {
+            state.customName = Component.literal(ownerName);
+        } else {
+            state.customName = null;
+        }
+
+        state.time = (blockEntity.getLevel() != null ? blockEntity.getLevel().getGameTime() : 0) + partialTicks;
+
+        // --- ZGODNIE Z 1.21.X: EKSTRAKCJA STANU MOBA W ODPOWIEDNIM WĄTKU ---
+        Entity displayEntity = blockEntity.getOrCreateDisplayEntity();
+        if (displayEntity != null) {
+            // Obliczamy odpowiednie skalowanie
+            float maxDimension = Math.max(displayEntity.getBbWidth(), displayEntity.getBbHeight());
+            state.entityScale = 0.35F;
+            if (maxDimension > 0.8F) {
+                state.entityScale = 0.35F / (maxDimension / 0.8F);
+            }
+
+            // Konwersja fizycznej encji na lekki EntityRenderState dla SubmitNodeCollector'a
+            state.entityRenderState = this.entityRenderer.extractEntity(displayEntity, 0.0F);
+        } else {
+            state.entityRenderState = null;
+        }
+    }
+
+    @Override
+    public void submit(TrophyRenderState state, PoseStack poseStack, SubmitNodeCollector submitNodeCollector, CameraRenderState camera) {
+        poseStack.pushPose();
+
+        poseStack.translate(0.5D, 0.0D, 0.5D);
+        float rotation = -state.facing.toYRot();
+        poseStack.mulPose(Axis.YP.rotationDegrees(rotation));
+
+        if (state.isWall) {
+            poseStack.translate(0.0D, 0.0D, -0.3125D);
+        }
+
+        // RENDEROWANIE TRÓJWYMIAROWEGO MOBA
+        if (state.entityRenderState != null) {
+            poseStack.pushPose();
+
+            float offset = (float) Math.sin(state.time / 10.0F) * 0.05F;
+            float spin = state.time * 3.0F;
+
+            // Moby opieramy niżej na trofeum (0.25D)
+            poseStack.translate(0.0D, 0.25D + offset, 0.0D);
+            poseStack.mulPose(Axis.YP.rotationDegrees(spin));
+
+            // Nakładamy wyliczoną wcześnie skalę
+            poseStack.scale(state.entityScale, state.entityScale, state.entityScale);
+
+            // Nowy system wywoływania renderowania z użyciem wyekstrahowanego stanu!
+            this.entityRenderer.submit(state.entityRenderState, camera, 0.0D, 0.0D, 0.0D, poseStack, submitNodeCollector);
+
+            poseStack.popPose();
+        }
+
+        // RENDEROWANIE NICKU WŁAŚCICIELA
+        if (state.customName != null) {
+            FormattedCharSequence formattedText = state.customName.getVisualOrderText();
+            float textWidth = this.font.width(formattedText);
+            float textX = -textWidth / 2.0F;
+
+            poseStack.pushPose();
+            poseStack.translate(0.0D, 0.18D, 0.25D);
+            poseStack.mulPose(Axis.YP.rotationDegrees(180.0F));
+            poseStack.scale(-0.015F, -0.015F, 0.015F);
+            submitNodeCollector.submitText(poseStack, textX, 0.0F, formattedText, false, Font.DisplayMode.NORMAL, 15728880, 0xFFFFFFFF, 0, 0x00000000);
+            poseStack.popPose();
+
+            poseStack.pushPose();
+            poseStack.translate(0.0D, 0.18D, -0.25D);
+            poseStack.mulPose(Axis.YP.rotationDegrees(0.0F));
+            poseStack.scale(-0.015F, -0.015F, 0.015F);
+            submitNodeCollector.submitText(poseStack, textX, 0.0F, formattedText, false, Font.DisplayMode.NORMAL, 15728880, 0xFFFFFFFF, 0, 0x00000000);
+            poseStack.popPose();
+        }
+
+        poseStack.popPose();
+    }
+
+    public static class TrophyRenderState extends BlockEntityRenderState {
+        public Direction facing = Direction.NORTH;
+        public boolean isWall = false;
+
+        // Zapisujemy wygenerowany Stan Encji (1.21.x) i jej docelową skalę
+        public EntityRenderState entityRenderState = null;
+        public float entityScale = 0.35F;
+
+        public Component customName = null;
+        public float time = 0.0f;
+    }
+}

@@ -6,13 +6,14 @@
       "entries": [
         {
           "type": "minecraft:item",
-          "name": "r3ct_collection:trophy_building",
+          "name": "r3ct_bestiary:trophy",
           "functions": [
             {
               "function": "minecraft:copy_components",
               "source": "block_entity",
               "include": [
-                "minecraft:custom_name"
+                "minecraft:custom_name",
+                "minecraft:custom_data"
               ]
             }
           ]

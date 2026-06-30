@@ -155,7 +155,6 @@ public class BestiaryScreen extends Screen {
 
     @Override
     public void extractRenderState(@NonNull GuiGraphicsExtractor guiGraphics, int mouseX, int mouseY, float partialTick) {
-        this.extractBlurredBackground(guiGraphics);
 
         float scale = calculateEffectiveScale();
         double scaledMouseX = (mouseX - this.width / 2.0) / scale + this.width / 2.0;

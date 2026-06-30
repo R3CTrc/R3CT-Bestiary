@@ -1,0 +1,16 @@
+{
+  "variants": {
+    "face=floor,facing=north": { "model": "r3ct_bestiary:block/trophy" },
+    "face=floor,facing=east":  { "model": "r3ct_bestiary:block/trophy", "y": 90 },
+    "face=floor,facing=south": { "model": "r3ct_bestiary:block/trophy", "y": 180 },
+    "face=floor,facing=west":  { "model": "r3ct_bestiary:block/trophy", "y": 270 },
+    "face=wall,facing=north": { "model": "r3ct_bestiary:block/trophy_wall" },
+    "face=wall,facing=east":  { "model": "r3ct_bestiary:block/trophy_wall", "y": 90 },
+    "face=wall,facing=south": { "model": "r3ct_bestiary:block/trophy_wall", "y": 180 },
+    "face=wall,facing=west":  { "model": "r3ct_bestiary:block/trophy_wall", "y": 270 },
+    "face=ceiling,facing=north": { "model": "r3ct_bestiary:block/trophy" },
+    "face=ceiling,facing=east":  { "model": "r3ct_bestiary:block/trophy" },
+    "face=ceiling,facing=south": { "model": "r3ct_bestiary:block/trophy" },
+    "face=ceiling,facing=west":  { "model": "r3ct_bestiary:block/trophy" }
+  }
+}

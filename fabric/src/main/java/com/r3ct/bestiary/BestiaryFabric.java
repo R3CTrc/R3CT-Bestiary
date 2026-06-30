@@ -26,19 +26,11 @@ public class BestiaryFabric implements ModInitializer {
     public void onInitialize() {
         BestiaryConfig.load();
 
-        registerTrophy("trophy_building", ModBlocks.TROPHY_BUILDING);
-        registerTrophy("trophy_combat", ModBlocks.TROPHY_COMBAT);
-        registerTrophy("trophy_tools", ModBlocks.TROPHY_TOOLS);
-        registerTrophy("trophy_food", ModBlocks.TROPHY_FOOD);
-        registerTrophy("trophy_redstone", ModBlocks.TROPHY_REDSTONE);
-        registerTrophy("trophy_ingredients", ModBlocks.TROPHY_INGREDIENTS);
-        registerTrophy("trophy_natural", ModBlocks.TROPHY_NATURAL);
-        registerTrophy("trophy_colored", ModBlocks.TROPHY_COLORED);
-        registerTrophy("trophy_egg", ModBlocks.TROPHY_EGG);
-        registerTrophy("trophy_functional", ModBlocks.TROPHY_FUNCTIONAL);
-        registerTrophy("trophy_mod", ModBlocks.TROPHY_MOD);
+        // Zarejestrowanie tylko JEDNEGO, uniwersalnego trofeum
+        registerTrophy("trophy", ModBlocks.TROPHY);
 
-        Registry.register(BuiltInRegistries.BLOCK_ENTITY_TYPE, Identifier.parse(Constants.MOD_ID + ":trophy_building_be"), ModBlocks.TROPHY_BE_TYPE);
+        // Zaktualizowana nazwa ID dla BlockEntity
+        Registry.register(BuiltInRegistries.BLOCK_ENTITY_TYPE, Identifier.parse(Constants.MOD_ID + ":trophy_be"), ModBlocks.TROPHY_BE_TYPE);
 
         ResourceKey<CreativeModeTab> TAB_KEY = ResourceKey.create(
                 Registries.CREATIVE_MODE_TAB,
@@ -47,19 +39,9 @@ public class BestiaryFabric implements ModInitializer {
 
         Registry.register(BuiltInRegistries.CREATIVE_MODE_TAB, TAB_KEY, FabricCreativeModeTab.builder()
                 .title(net.minecraft.network.chat.Component.translatable("itemGroup." + Constants.MOD_ID + ".main_tab"))
-                .icon(() -> new net.minecraft.world.item.ItemStack(ModBlocks.TROPHY_BUILDING))
+                .icon(() -> new net.minecraft.world.item.ItemStack(ModBlocks.TROPHY))
                 .displayItems((context, output) -> {
-                    output.accept(ModBlocks.TROPHY_BUILDING);
-                    output.accept(ModBlocks.TROPHY_NATURAL);
-                    output.accept(ModBlocks.TROPHY_COLORED);
-                    output.accept(ModBlocks.TROPHY_COMBAT);
-                    output.accept(ModBlocks.TROPHY_TOOLS);
-                    output.accept(ModBlocks.TROPHY_REDSTONE);
-                    output.accept(ModBlocks.TROPHY_FUNCTIONAL);
-                    output.accept(ModBlocks.TROPHY_FOOD);
-                    output.accept(ModBlocks.TROPHY_INGREDIENTS);
-                    output.accept(ModBlocks.TROPHY_EGG);
-                    output.accept(ModBlocks.TROPHY_MOD);
+                    output.accept(ModBlocks.TROPHY); // Tylko jedno trofeum w zakładce
                 })
                 .build()
         );
@@ -69,6 +51,7 @@ public class BestiaryFabric implements ModInitializer {
         PayloadTypeRegistry.clientboundPlay().register(com.r3ct.bestiary.network.LeaderboardDataPayload.TYPE, com.r3ct.bestiary.network.LeaderboardDataPayload.CODEC);
         PayloadTypeRegistry.clientboundPlay().register(com.r3ct.bestiary.network.MobStatsSyncPayload.TYPE, com.r3ct.bestiary.network.MobStatsSyncPayload.STREAM_CODEC);
         PayloadTypeRegistry.clientboundPlay().register(com.r3ct.bestiary.network.ConfigSyncPayload.TYPE, com.r3ct.bestiary.network.ConfigSyncPayload.CODEC);
+        PayloadTypeRegistry.serverboundPlay().register(com.r3ct.bestiary.network.SetTrophyEntityPayload.TYPE, com.r3ct.bestiary.network.SetTrophyEntityPayload.CODEC);
 
         ServerPlayConnectionEvents.JOIN.register((handler, sender, server) -> {
             com.r3ct.bestiary.data.PlayerData data = com.r3ct.bestiary.data.ModState.getPlayerData(server, handler.player.getUUID());
@@ -82,6 +65,22 @@ public class BestiaryFabric implements ModInitializer {
 
         ServerPlayNetworking.registerGlobalReceiver(com.r3ct.bestiary.network.RequestLeaderboardPayload.TYPE, (payload, context) -> {
             context.server().execute(() -> MobProgressHandler.handleLeaderboardRequest(context.player()));
+        });
+
+        ServerPlayNetworking.registerGlobalReceiver(com.r3ct.bestiary.network.SetTrophyEntityPayload.TYPE, (payload, context) -> {
+            context.server().execute(() -> {
+                net.minecraft.world.entity.player.Player player = context.player();
+                if (player.level().isLoaded(payload.pos()) && player.distanceToSqr(net.minecraft.world.phys.Vec3.atCenterOf(payload.pos())) < 64.0) {
+                    net.minecraft.world.level.block.entity.BlockEntity be = player.level().getBlockEntity(payload.pos());
+                    if (be instanceof com.r3ct.bestiary.block.TrophyBlockEntity tbe) {
+                        if (tbe.getEntityList().contains(payload.entityId())) {
+                            tbe.setDisplayEntityId(payload.entityId());
+                            // Satysfakcjonujący dźwięk słyszany przez innych graczy w pobliżu
+                            player.level().playSound(null, payload.pos(), net.minecraft.sounds.SoundEvents.UI_BUTTON_CLICK.value(), net.minecraft.sounds.SoundSource.BLOCKS, 0.5f, 1.2f);
+                        }
+                    }
+                }
+            });
         });
     }
 

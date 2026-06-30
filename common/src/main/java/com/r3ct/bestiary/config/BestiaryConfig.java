@@ -39,7 +39,6 @@ public class BestiaryConfig {
 
     public static int milestoneInterval = 10;
     public static List<LootEntry> milestoneRewards = new ArrayList<>();
-    public static Map<String, String> categoryRewards = new HashMap<>();
 
     private static final int SERVER_CONFIG_VERSION = 1;
     private static final int CLIENT_CONFIG_VERSION = 1;
@@ -137,7 +136,6 @@ public class BestiaryConfig {
                 if (data.xpCreatures != null && !data.xpCreatures.isEmpty()) xpCreatures = data.xpCreatures;
                 milestoneInterval = data.milestoneInterval;
                 if (data.milestoneRewards != null) milestoneRewards = data.milestoneRewards;
-                if (data.categoryRewards != null) categoryRewards = data.categoryRewards;
             }
         } catch (Exception e) { System.err.println("[R3CT-Bestiary] Error loading rewards config!"); }
     }
@@ -196,7 +194,6 @@ public class BestiaryConfig {
         List<Integer> xpCreatures = BestiaryConfig.xpCreatures;
         int milestoneInterval = BestiaryConfig.milestoneInterval;
         List<LootEntry> milestoneRewards = BestiaryConfig.milestoneRewards;
-        Map<String, String> categoryRewards = BestiaryConfig.categoryRewards;
     }
 
     public static class LootEntry {
@@ -263,7 +260,6 @@ public class BestiaryConfig {
                 if (rewardsData.xpCreatures != null && !rewardsData.xpCreatures.isEmpty()) xpCreatures = rewardsData.xpCreatures;
                 milestoneInterval = rewardsData.milestoneInterval;
                 if (rewardsData.milestoneRewards != null) milestoneRewards = rewardsData.milestoneRewards;
-                if (rewardsData.categoryRewards != null) categoryRewards = rewardsData.categoryRewards;
             }
             System.out.println("[R3CT-Bestiary] Pomyślnie zsynchronizowano konfigurację serwera do RAMu!");
         } catch (Exception e) {

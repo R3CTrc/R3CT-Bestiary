@@ -37,13 +37,5 @@
       "chance": 50,
       "color": "&b"
     }
-  ],
-
-  "_comment_categories": "Rewards given for completing an entire category. Default fallback for mods is 'modded_generic'.",
-  "categoryRewards": {
-    "minecraft:bosses": "minecraft:bedrock",
-    "minecraft:monsters": "minecraft:bedrock",
-    "minecraft:creatures": "minecraft:bedrock",
-    "modded_generic": "minecraft:bedrock"
-  }
+  ]
 }

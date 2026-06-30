@@ -51,4 +51,6 @@ public interface IPlatformHelper {
     <T extends BlockEntity> BlockEntityType<T> createBlockEntityType(BiFunction<BlockPos, BlockState, T> factory, Block... blocks);
 
     boolean isCatalogKey(Object event);
+
+    void sendSetTrophyEntityPacket(net.minecraft.core.BlockPos pos, String entityId);
 }

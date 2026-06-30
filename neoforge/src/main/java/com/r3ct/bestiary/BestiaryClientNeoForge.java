@@ -38,6 +38,14 @@ public class BestiaryClientNeoForge {
                     () -> (minecraft, parentScreen) -> new BestiaryConfigScreen(parentScreen)
             );
         }
+
+        @SubscribeEvent
+        public static void onRegisterRenderers(net.neoforged.neoforge.client.event.EntityRenderersEvent.RegisterRenderers event) {
+            event.registerBlockEntityRenderer(
+                    com.r3ct.bestiary.block.ModBlocks.TROPHY_BE_TYPE,
+                    com.r3ct.bestiary.client.render.TrophyBlockEntityRenderer::new
+            );
+        }
     }
 
     @EventBusSubscriber(modid = "r3ct_bestiary", value = Dist.CLIENT)

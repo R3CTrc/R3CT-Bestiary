@@ -1,8 +1,0 @@
-{
-  "variants": {
-    "facing=north": { "model": "r3ct_collection:block/trophy_functional" },
-    "facing=east":  { "model": "r3ct_collection:block/trophy_functional", "y": 90 },
-    "facing=south": { "model": "r3ct_collection:block/trophy_functional", "y": 180 },
-    "facing=west":  { "model": "r3ct_collection:block/trophy_functional", "y": 270 }
-  }
-}
