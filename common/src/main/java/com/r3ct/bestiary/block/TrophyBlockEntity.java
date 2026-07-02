@@ -76,6 +76,16 @@ public class TrophyBlockEntity extends BlockEntity {
             EntityType<?> type = BuiltInRegistries.ENTITY_TYPE.get(Identifier.parse(this.displayEntityId)).map(net.minecraft.core.Holder::value).orElse(null);
             if (type != null) {
                 this.displayEntityCache = type.create(this.level, EntitySpawnReason.LOAD);
+
+                if (this.displayEntityCache instanceof net.minecraft.world.entity.Mob mob) {
+                    mob.setNoAi(true);
+                }
+                if (this.displayEntityCache instanceof net.minecraft.world.entity.monster.piglin.AbstractPiglin piglin) {
+                    piglin.setImmuneToZombification(true);
+                }
+                if (this.displayEntityCache instanceof net.minecraft.world.entity.monster.hoglin.Hoglin hoglin) {
+                    hoglin.setImmuneToZombification(true);
+                }
             }
         }
         return this.displayEntityCache;

@@ -55,14 +55,20 @@ public class TrophyBlockEntityRenderer implements BlockEntityRenderer<TrophyBloc
         Entity displayEntity = blockEntity.getOrCreateDisplayEntity();
         if (displayEntity != null) {
 
-            net.minecraft.core.BlockPos pos = blockEntity.getBlockPos();
-            displayEntity.setPos(pos.getX() + 0.5D, pos.getY() + 0.5D, pos.getZ() + 0.5D);
+            if (displayEntity instanceof net.minecraft.world.entity.LivingEntity living) {
+                living.yBodyRot = 0.0F;
+                living.yBodyRotO = 0.0F;
+                living.yHeadRot = 0.0F;
+                living.yHeadRotO = 0.0F;
+                living.setYRot(0.0F);
+                living.yRotO = 0.0F;
+                living.setXRot(0.0F);
+                living.xRotO = 0.0F;
+            }
 
-            displayEntity.xOld = displayEntity.getX();
-            displayEntity.yOld = displayEntity.getY();
-            displayEntity.zOld = displayEntity.getZ();
-
-            displayEntity.tickCount = (int) (blockEntity.getLevel().getGameTime() % 10000);
+            if (blockEntity.getLevel() != null) {
+                displayEntity.tickCount = (int) blockEntity.getLevel().getGameTime();
+            }
 
             float maxDimension = Math.max(displayEntity.getBbWidth(), displayEntity.getBbHeight());
             if (maxDimension <= 0.01F) maxDimension = 1.0F;
@@ -75,6 +81,8 @@ public class TrophyBlockEntityRenderer implements BlockEntityRenderer<TrophyBloc
             if (state.entityRenderState != null) {
                 state.entityRenderState.shadowRadius = 0.0F;
                 state.entityRenderState.shadowPieces.clear();
+
+                state.entityRenderState.lightCoords = 15728880;
             }
 
         } else {

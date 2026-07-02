@@ -439,17 +439,21 @@ public class MobProgressHandler {
         return false;
     }
 
-    public static void debugCompleteCategory(ServerPlayer player, String categoryId) {
+    public static void debugCompleteCategory(net.minecraft.server.level.ServerPlayer player, String categoryId) {
         if (!player.isCreative()) return;
+
+        if (com.r3ct.bestiary.scanner.EntityTypeScanner.SCANNED_CATEGORIES.isEmpty()) {
+            com.r3ct.bestiary.scanner.EntityTypeScanner.scanEntities();
+        }
 
         PlayerData data = ModState.getPlayerData(player.level().getServer(), player.getUUID());
         com.r3ct.bestiary.scanner.EntityTypeScanner.CategoryData catData = com.r3ct.bestiary.scanner.EntityTypeScanner.SCANNED_CATEGORIES.get(categoryId);
 
         if (catData != null) {
             for (String entityId : catData.entityIds) {
-                EntityType<?> type = BuiltInRegistries.ENTITY_TYPE.get(Identifier.parse(entityId)).map(net.minecraft.core.Holder::value).orElse(null);
+                net.minecraft.world.entity.EntityType<?> type = net.minecraft.core.registries.BuiltInRegistries.ENTITY_TYPE.get(net.minecraft.resources.Identifier.parse(entityId)).map(net.minecraft.core.Holder::value).orElse(null);
                 if (type != null) {
-                    List<Integer> thresholds = getProgressThresholds(entityId, type.getCategory());
+                    java.util.List<Integer> thresholds = getProgressThresholds(entityId, type.getCategory());
                     if (!thresholds.isEmpty()) {
                         int maxReq = thresholds.get(thresholds.size() - 1);
                         data.killCounts.put(entityId, maxReq);
@@ -460,9 +464,9 @@ public class MobProgressHandler {
             handleCategoryReward(player, categoryId);
 
             ModState.get(player.level().getServer()).setDirty();
-            Services.PLATFORM.sendSyncDataPacketToClient(player, data.killCounts, data.rewardedCategories);
+            com.r3ct.bestiary.platform.Services.PLATFORM.sendSyncDataPacketToClient(player, data.killCounts, data.rewardedCategories);
 
-            player.sendSystemMessage(Component.literal("§d[DEV] Kategoria " + categoryId + " została wymaksowana!"));
+            player.sendSystemMessage(net.minecraft.network.chat.Component.literal("§d[DEV] Kategoria " + categoryId + " została wymaksowana!"));
         }
     }
 }

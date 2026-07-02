@@ -80,18 +80,6 @@ public class BestiaryScreen extends Screen {
         }
 
         com.r3ct.bestiary.platform.Services.PLATFORM.sendRequestLeaderboardPacketToServer();
-
-        if (this.minecraft != null && this.minecraft.player != null && this.minecraft.player.isCreative()) {
-            this.addRenderableWidget(net.minecraft.client.gui.components.Button.builder(
-                    Component.literal("DEV: Wymaksuj"),
-                    btn -> {
-                        if (!cachedCategories.isEmpty()) {
-                            String currentCategoryId = cachedCategories.get(selectedTabIndex).categoryId;
-                            com.r3ct.bestiary.platform.Services.PLATFORM.sendDebugCompleteCategoryPacket(currentCategoryId);
-                        }
-                    }
-            ).bounds(10, 10, 100, 20).build());
-        }
     }
 
     private boolean isCompleted(String entityId) {
@@ -145,6 +133,16 @@ public class BestiaryScreen extends Screen {
             try {
                 net.minecraft.world.entity.Entity entity = type.create(this.minecraft.level, net.minecraft.world.entity.EntitySpawnReason.COMMAND);
                 if (entity instanceof net.minecraft.world.entity.LivingEntity living) {
+
+                    if (living instanceof net.minecraft.world.entity.Mob mob) {
+                        mob.setNoAi(true);
+                    }
+                    if (living instanceof net.minecraft.world.entity.monster.piglin.AbstractPiglin piglin) {
+                        piglin.setImmuneToZombification(true);
+                    }
+                    if (living instanceof net.minecraft.world.entity.monster.hoglin.Hoglin hoglin) {
+                        hoglin.setImmuneToZombification(true);
+                    }
 
                     com.r3ct.bestiary.network.MobBaseStats serverStats = ClientPlayerData.serverMobStats.get(entityId);
                     if (serverStats != null) {
@@ -454,6 +452,21 @@ public class BestiaryScreen extends Screen {
 
             guiGraphics.item(getCategoryIcon(cat), finalX + 9, currentY + 6);
 
+            if (isSelected && this.minecraft != null && this.minecraft.player != null && this.minecraft.player.isCreative()) {
+                int btnX = finalX - 18;
+                int btnY = currentY + 6;
+                boolean isBtnHovered = scaledMouseX >= btnX && scaledMouseX <= btnX + 16 && scaledMouseY >= btnY && scaledMouseY <= btnY + 16;
+
+                guiGraphics.fill(btnX, btnY, btnX + 16, btnY + 16, isBtnHovered ? 0xFF00AA00 : 0xFF005500);
+                Component check = Component.literal("✔");
+                int textW = this.font.width(check);
+                guiGraphics.text(this.font, check, btnX + 8 - (textW / 2), btnY + 4, isBtnHovered ? 0xFFFFFFFF : 0xFFDDDDDD, true);
+
+                if (isBtnHovered) {
+                    guiGraphics.setTooltipForNextFrame(this.font, Component.literal("Zalicz kategorię (DEV)").withStyle(ChatFormatting.GREEN), rawMouseX, rawMouseY);
+                }
+            }
+
             if (isHovered) {
                 List<Component> tabTooltip = new ArrayList<>();
                 Component catNameComp = Component.literal(cat.getFormattedModName() + ": ")
@@ -721,8 +734,14 @@ public class BestiaryScreen extends Screen {
         guiGraphics.fill(boxX0, boxY0, boxX1, boxY1, 0x11000000);
 
         if (dummy != null && isCollected) {
+            if (this.minecraft != null && this.minecraft.level != null) {
+                dummy.tickCount = (int) (this.minecraft.level.getGameTime() % 10000);
+            }
+
             float maxDim = Math.max(dummy.getBbWidth(), dummy.getBbHeight());
-            int scale = (int) (40 / Math.max(1.0f, maxDim / 1.5f));
+            if (maxDim <= 0.01F) maxDim = 1.0F;
+
+            int scale = (int) (45.0F * (float) Math.pow(maxDim, 0.4) / maxDim);
 
             net.minecraft.client.gui.screens.inventory.InventoryScreen.extractEntityInInventoryFollowsMouse(
                     guiGraphics, boxX0 + 2, boxY0 + 2, boxX1 - 2, boxY1 - 2,
@@ -971,6 +990,30 @@ public class BestiaryScreen extends Screen {
 
         int bookStartX = (this.width - RENDER_SIZE) / 2;
         int bookStartY = (this.height - RENDER_SIZE) / 2;
+
+        if (this.minecraft != null && this.minecraft.player != null && this.minecraft.player.isCreative()) {
+            if (activeSpecialTab == SpecialTab.NONE || activeSpecialTab == SpecialTab.DETAILS) {
+
+                int visibleIndex = selectedTabIndex - currentTabScroll;
+
+                if (visibleIndex >= 0 && visibleIndex < 7) {
+                    int tabStartY = bookStartY + 20;
+                    int currentY = tabStartY + (visibleIndex * 30);
+                    int baseTabX = (bookStartX + 27) - 32 + 5;
+
+                    int finalX = baseTabX - 2;
+                    int btnX = finalX - 18;
+                    int btnY = currentY + 6;
+
+                    if (mouseX >= btnX && mouseX <= btnX + 16 && mouseY >= btnY && mouseY <= btnY + 16) {
+                        String catId = cachedCategories.get(selectedTabIndex).categoryId;
+                        com.r3ct.bestiary.platform.Services.PLATFORM.sendDebugCompleteCategoryPacket(catId);
+                        this.minecraft.getSoundManager().play(net.minecraft.client.resources.sounds.SimpleSoundInstance.forUI(net.minecraft.sounds.SoundEvents.UI_BUTTON_CLICK, 1.0F));
+                        return true;
+                    }
+                }
+            }
+        }
 
         int rightTabX = bookStartX + RENDER_SIZE - 40;
         SpecialTab[] tabs = {SpecialTab.HOME, SpecialTab.INFO, SpecialTab.LEADERBOARD};
