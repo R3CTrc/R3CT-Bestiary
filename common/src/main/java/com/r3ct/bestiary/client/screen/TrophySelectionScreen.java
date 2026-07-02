@@ -60,7 +60,7 @@ public class TrophySelectionScreen extends Screen {
             } else {
                 String q = query.toLowerCase();
                 for (String id : this.allEntities) {
-                    if (id.toLowerCase().contains(q) || getEntityName(id).toLowerCase().contains(q)) {
+                    if (id.toLowerCase().contains(q) || getEntityName(id).getString().toLowerCase().contains(q)) {
                         this.filteredEntities.add(id);
                     }
                 }
@@ -69,10 +69,10 @@ public class TrophySelectionScreen extends Screen {
         this.addRenderableWidget(this.searchBox);
     }
 
-    private String getEntityName(String entityId) {
+    private Component getEntityName(String entityId) {
         return net.minecraft.core.registries.BuiltInRegistries.ENTITY_TYPE.get(Identifier.parse(entityId))
-                .map(holder -> holder.value().getDescription().getString())
-                .orElse(entityId);
+                .map(holder -> holder.value().getDescription())
+                .orElse(Component.literal(entityId));
     }
 
     private ItemStack getIconForEntity(String entityId) {
@@ -98,7 +98,6 @@ public class TrophySelectionScreen extends Screen {
             try {
                 net.minecraft.world.entity.Entity entity = type.create(this.minecraft.level, net.minecraft.world.entity.EntitySpawnReason.COMMAND);
                 if (entity instanceof net.minecraft.world.entity.LivingEntity living) {
-
                     if (living instanceof net.minecraft.world.entity.Mob mob) mob.setNoAi(true);
                     if (living instanceof net.minecraft.world.entity.monster.piglin.AbstractPiglin piglin) piglin.setImmuneToZombification(true);
                     if (living instanceof net.minecraft.world.entity.monster.hoglin.Hoglin hoglin) hoglin.setImmuneToZombification(true);
@@ -166,9 +165,7 @@ public class TrophySelectionScreen extends Screen {
 
             int bgColor = isSelected ? 0xFFB8860B : (isHovered ? 0xFF444444 : 0xFF2A2A2A);
             guiGraphics.fill(slotX, slotY, slotX + cellW - 2, slotY + cellH - 2, bgColor);
-
             guiGraphics.fill(slotX + 1, slotY + 1, slotX + cellW - 3, slotY + cellH - 3, 0xFF1E1E1E);
-
             guiGraphics.item(getIconForEntity(entityId), slotX + 2, slotY + 2);
         }
 
@@ -195,18 +192,18 @@ public class TrophySelectionScreen extends Screen {
 
                 net.minecraft.client.gui.screens.inventory.InventoryScreen.extractEntityInInventoryFollowsMouse(
                         guiGraphics, previewX + 5, previewY + 15, previewX + previewW - 5, previewY + previewH - 25,
-                        scale, 0.0625F, mouseX, mouseY, dummy
+                        scale, 0.0625F, (float) mouseX, (float) mouseY, dummy
                 );
             }
 
-            String name = getEntityName(entityToPreview);
-            int textW = this.font.width(name);
+            Component nameComp = getEntityName(entityToPreview);
+            int textW = this.font.width(nameComp);
             float textScale = textW > previewW - 10 ? (previewW - 10f) / textW : 1.0f;
 
             guiGraphics.pose().pushMatrix();
             guiGraphics.pose().translate(previewX + (previewW / 2.0f), previewY + previewH - 15);
             guiGraphics.pose().scale(textScale, textScale);
-            guiGraphics.text(this.font, Component.literal(name), -this.font.width(name) / 2, 0, 0xFFDDDDDD, false);
+            guiGraphics.text(this.font, nameComp, -textW / 2, 0, 0xFFDDDDDD, false);
             guiGraphics.pose().popMatrix();
         }
 
