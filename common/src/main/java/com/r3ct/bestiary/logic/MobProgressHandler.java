@@ -69,8 +69,8 @@ public class MobProgressHandler {
         return BestiaryConfig.defaultProgressMonsters;
     }
 
-    public static int getCompletedMobsCount(PlayerData data) {
-        int completedCount = 0;
+    public static int getTotalUnlockedPages(PlayerData data) {
+        int totalPages = 0;
         for (var entry : data.killCounts.entrySet()) {
             String entityId = entry.getKey();
             int count = entry.getValue();
@@ -78,30 +78,16 @@ public class MobProgressHandler {
             EntityType<?> type = BuiltInRegistries.ENTITY_TYPE.get(Identifier.parse(entityId)).map(net.minecraft.core.Holder::value).orElse(null);
             if (type != null) {
                 List<Integer> thresholds = getProgressThresholds(entityId, type.getCategory());
-                if (!thresholds.isEmpty() && count >= thresholds.get(0)) {
-                    completedCount++;
+                for (int t : thresholds) {
+                    if (count >= t) {
+                        totalPages++;
+                    } else {
+                        break;
+                    }
                 }
             }
         }
-        return completedCount;
-    }
-
-    public static int getTotalValidKills(PlayerData data) {
-        int totalValidKills = 0;
-        for (var entry : data.killCounts.entrySet()) {
-            String entityId = entry.getKey();
-            int count = entry.getValue();
-
-            EntityType<?> type = BuiltInRegistries.ENTITY_TYPE.get(Identifier.parse(entityId)).map(net.minecraft.core.Holder::value).orElse(null);
-            if (type != null) {
-                List<Integer> thresholds = getProgressThresholds(entityId, type.getCategory());
-                if (!thresholds.isEmpty()) {
-                    int maxRequired = thresholds.get(thresholds.size() - 1);
-                    totalValidKills += Math.min(count, maxRequired);
-                }
-            }
-        }
-        return totalValidKills;
+        return totalPages;
     }
 
     public static void handleMobKill(ServerPlayer player, EntityType<?> entityType) { handleProgress(player, entityType); }
@@ -142,6 +128,60 @@ public class MobProgressHandler {
         }
     }
 
+    public static void handlePlayerDolphinSwimTick(ServerPlayer player) {
+        if (player.hasEffect(net.minecraft.world.effect.MobEffects.DOLPHINS_GRACE)) {
+
+            double dx = player.getX() - player.xOld;
+            double dy = player.getY() - player.yOld;
+            double dz = player.getZ() - player.zOld;
+            double distanceTraveled = Math.sqrt(dx * dx + dy * dy + dz * dz);
+
+            if (distanceTraveled < 0.01) return;
+
+            PlayerData data = ModState.getPlayerData(player.level().getServer(), player.getUUID());
+            String entityId = "minecraft:dolphin";
+
+            double currentDistance = data.rideDistances.getOrDefault(entityId, 0.0);
+            currentDistance += distanceTraveled;
+
+            double requiredDistance = BestiaryConfig.rideDistanceBlocks;
+
+            if (currentDistance >= requiredDistance) {
+                net.minecraft.world.entity.EntityType<?> dolphinType = BuiltInRegistries.ENTITY_TYPE.get(Identifier.parse(entityId)).map(net.minecraft.core.Holder::value).orElse(null);
+                if (dolphinType != null) {
+                    handleProgress(player, dolphinType);
+                }
+                currentDistance -= requiredDistance;
+            }
+
+            data.rideDistances.put(entityId, currentDistance);
+
+            if (player.tickCount % 200 == 0) {
+                ModState.get(player.level().getServer()).setDirty();
+            }
+        }
+    }
+
+    public static void handlePlayerFishedItems(ServerPlayer player, java.util.Collection<ItemStack> loots) {
+        for (ItemStack stack : loots) {
+            net.minecraft.world.entity.EntityType<?> targetEntity = null;
+
+            if (stack.is(net.minecraft.world.item.Items.COD)) {
+                targetEntity = net.minecraft.world.entity.EntityType.COD;
+            } else if (stack.is(net.minecraft.world.item.Items.SALMON)) {
+                targetEntity = net.minecraft.world.entity.EntityType.SALMON;
+            } else if (stack.is(net.minecraft.world.item.Items.PUFFERFISH)) {
+                targetEntity = net.minecraft.world.entity.EntityType.PUFFERFISH;
+            } else if (stack.is(net.minecraft.world.item.Items.TROPICAL_FISH)) {
+                targetEntity = net.minecraft.world.entity.EntityType.TROPICAL_FISH;
+            }
+
+            if (targetEntity != null) {
+                handleProgress(player, targetEntity);
+            }
+        }
+    }
+
     private static void handleProgress(ServerPlayer player, EntityType<?> entityType) {
         MobCategory category = entityType.getCategory();
         String entityId = BuiltInRegistries.ENTITY_TYPE.getKey(entityType).toString();
@@ -158,128 +198,94 @@ public class MobProgressHandler {
         PlayerData data = ModState.getPlayerData(player.level().getServer(), player.getUUID());
         data.lastKnownName = player.getName().getString();
 
+        int pagesBefore = getTotalUnlockedPages(data);
+
         int currentKills = data.killCounts.getOrDefault(entityId, 0);
         int newKills = currentKills + 1;
         data.killCounts.put(entityId, newKills);
 
         ModState.get(player.level().getServer()).setDirty();
 
-        List<Integer> thresholds = getProgressThresholds(entityId, category);
-        if (thresholds.isEmpty()) return;
+        int pagesAfter = getTotalUnlockedPages(data);
 
-        int baseReq = thresholds.size() > 0 ? thresholds.get(0) : -1;
-        int star1Req = thresholds.size() > 1 ? thresholds.get(1) : -1;
-        int star2Req = thresholds.size() > 2 ? thresholds.get(2) : -1;
-        int star3Req = thresholds.size() > 3 ? thresholds.get(3) : -1;
+        if (pagesAfter > pagesBefore) {
+            List<Integer> thresholds = getProgressThresholds(entityId, category);
+            int unlockedPageIndex = -1;
 
-        String bestiaryCat = getBestiaryCategory(entityId, category);
-
-        List<Integer> xpThresholds;
-        if (bestiaryCat.equals("bosses")) {
-            xpThresholds = BestiaryConfig.xpBosses;
-        } else if (bestiaryCat.equals("monsters")) {
-            xpThresholds = BestiaryConfig.xpMonsters;
-        } else {
-            xpThresholds = BestiaryConfig.xpCreatures;
-        }
-
-        if (newKills == baseReq) {
-            BestiaryConfig.load();
-
-            int completedBefore = getCompletedMobsCount(data) - 1;
-            int completedAfter = completedBefore + 1;
-
-            int xpToGive = xpThresholds.size() > 0 ? xpThresholds.get(0) : 0;
-            player.giveExperiencePoints(xpToGive);
-
-            player.level().playSound(null, player.blockPosition(),
-                    net.minecraft.sounds.SoundEvents.PLAYER_LEVELUP,
-                    net.minecraft.sounds.SoundSource.PLAYERS, 1.0F, 1.0F);
-
-            var prefix = Component.literal("[Bestiary] ").withStyle(ChatFormatting.RED);
-            var mobNameComp = entityType.getDescription().copy().withStyle(ChatFormatting.YELLOW);
-
-            player.sendSystemMessage(
-                    Component.empty()
-                            .append(prefix)
-                            .append(Component.translatable("chat.r3ct_bestiary.mob_completed", mobNameComp).withStyle(ChatFormatting.GREEN))
-            );
-
-            if (completedAfter >= 1) grantAdvancement(player, "r3ct_bestiary:first_kill");
-            if (completedAfter >= 100) grantAdvancement(player, "r3ct_bestiary:mobs_100");
-            if (completedAfter >= 500) grantAdvancement(player, "r3ct_bestiary:mobs_500");
-            if (completedAfter >= 1000) grantAdvancement(player, "r3ct_bestiary:mobs_1000");
-
-            int interval = BestiaryConfig.milestoneInterval;
-            if (interval > 0 && (completedBefore / interval < completedAfter / interval)) {
-                BestiaryConfig.LootEntry reward = BestiaryConfig.getRandomMilestoneReward();
-                if (reward != null) {
-                    Item rewardItem = BuiltInRegistries.ITEM.get(Identifier.parse(reward.item)).map(net.minecraft.core.Holder::value).orElse(Items.AIR);
-                    if (rewardItem != Items.AIR) {
-                        int amount = reward.min_amount + player.getRandom().nextInt((reward.max_amount - reward.min_amount) + 1);
-                        ItemStack rewardStack = new ItemStack(rewardItem, amount);
-                        var savedItemName = rewardStack.getHoverName().copy();
-
-                        giveItemToPlayer(player, rewardStack);
-
-                        player.level().playSound(null, player.blockPosition(),
-                                net.minecraft.sounds.SoundEvents.FIREWORK_ROCKET_TWINKLE,
-                                net.minecraft.sounds.SoundSource.PLAYERS, 1.0F, 1.0F);
-
-                        ChatFormatting rewardColor = ChatFormatting.AQUA;
-                        if (reward.color != null && reward.color.length() >= 2 && reward.color.startsWith("&")) {
-                            ChatFormatting parsedColor = ChatFormatting.getByCode(reward.color.charAt(1));
-                            if (parsedColor != null) rewardColor = parsedColor;
-                        }
-
-                        var rewardPrefix = Component.literal("[Bestiary] ").withStyle(ChatFormatting.RED);
-                        var numberComp = Component.literal(String.valueOf(completedAfter)).withStyle(ChatFormatting.YELLOW);
-                        var rewardComp = Component.literal(amount + "x ")
-                                .withStyle(rewardColor)
-                                .append(savedItemName.withStyle(rewardColor));
-
-                        player.sendSystemMessage(
-                                Component.empty()
-                                        .append(rewardPrefix)
-                                        .append(Component.translatable("chat.r3ct_bestiary.milestone_reward", numberComp, rewardComp).withStyle(ChatFormatting.GREEN))
-                        );
-                    }
+            for (int i = 0; i < thresholds.size(); i++) {
+                if (newKills == thresholds.get(i)) {
+                    unlockedPageIndex = i;
+                    break;
                 }
             }
-            checkAndAwardCompletedCategories(player, data);
-        }
-        else if (newKills == star1Req) {
-            int xpToGive = xpThresholds.size() > 1 ? xpThresholds.get(1) : 0;
-            handlePageUnlock(player, entityType, 2, xpToGive);
-        } else if (newKills == star2Req) {
-            int xpToGive = xpThresholds.size() > 2 ? xpThresholds.get(2) : 0;
-            handlePageUnlock(player, entityType, 3, xpToGive);
-        } else if (newKills == star3Req) {
-            int xpToGive = xpThresholds.size() > 3 ? xpThresholds.get(3) : 0;
-            handlePageUnlock(player, entityType, 4, xpToGive);
+
+            if (unlockedPageIndex != -1) {
+                int pageNumber = unlockedPageIndex + 1;
+
+                String bestiaryCat = getBestiaryCategory(entityId, category);
+                List<Integer> xpThresholds;
+                if (bestiaryCat.equals("bosses")) {
+                    xpThresholds = BestiaryConfig.xpBosses;
+                } else if (bestiaryCat.equals("monsters")) {
+                    xpThresholds = BestiaryConfig.xpMonsters;
+                } else {
+                    xpThresholds = BestiaryConfig.xpCreatures;
+                }
+
+                int xpToGive = xpThresholds.size() > unlockedPageIndex ? xpThresholds.get(unlockedPageIndex) : 0;
+                player.giveExperiencePoints(xpToGive);
+
+                var prefix = Component.translatable("chat.r3ct_bestiary.prefix").withStyle(ChatFormatting.RED);
+                var mobNameComp = entityType.getDescription().copy().withStyle(ChatFormatting.YELLOW);
+
+                if (pageNumber == 1) {
+                    player.level().playSound(null, player.blockPosition(), net.minecraft.sounds.SoundEvents.PLAYER_LEVELUP, net.minecraft.sounds.SoundSource.PLAYERS, 1.0F, 1.0F);
+                    player.sendSystemMessage(Component.empty().append(prefix).append(Component.translatable("chat.r3ct_bestiary.mob_completed", mobNameComp).withStyle(ChatFormatting.GREEN)));
+                } else {
+                    player.level().playSound(null, player.blockPosition(), net.minecraft.sounds.SoundEvents.UI_TOAST_CHALLENGE_COMPLETE, net.minecraft.sounds.SoundSource.PLAYERS, 1.0F, 1.0F);
+                    var pageNumComp = Component.literal(String.valueOf(pageNumber)).withStyle(ChatFormatting.GOLD);
+                    player.sendSystemMessage(Component.empty().append(prefix).append(Component.translatable("chat.r3ct_bestiary.page_unlocked", pageNumComp, mobNameComp).withStyle(ChatFormatting.GREEN)));
+                }
+
+                if (pagesAfter >= 1 && pagesBefore < 1) grantAdvancement(player, "r3ct_bestiary:first_item");
+                if (pagesAfter >= 100 && pagesBefore < 100) grantAdvancement(player, "r3ct_bestiary:items_100");
+                if (pagesAfter >= 500 && pagesBefore < 500) grantAdvancement(player, "r3ct_bestiary:items_500");
+                if (pagesAfter >= 1000 && pagesBefore < 1000) grantAdvancement(player, "r3ct_bestiary:items_1000");
+
+                int interval = BestiaryConfig.milestoneInterval;
+                if (interval > 0 && (pagesBefore / interval < pagesAfter / interval)) {
+                    BestiaryConfig.LootEntry reward = BestiaryConfig.getRandomMilestoneReward();
+                    if (reward != null) {
+                        Item rewardItem = BuiltInRegistries.ITEM.get(Identifier.parse(reward.item)).map(net.minecraft.core.Holder::value).orElse(Items.AIR);
+                        if (rewardItem != Items.AIR) {
+                            int amount = reward.min_amount + player.getRandom().nextInt((reward.max_amount - reward.min_amount) + 1);
+                            ItemStack rewardStack = new ItemStack(rewardItem, amount);
+                            var savedItemName = rewardStack.getHoverName().copy();
+
+                            giveItemToPlayer(player, rewardStack);
+
+                            player.level().playSound(null, player.blockPosition(), net.minecraft.sounds.SoundEvents.FIREWORK_ROCKET_TWINKLE, net.minecraft.sounds.SoundSource.PLAYERS, 1.0F, 1.0F);
+
+                            ChatFormatting rewardColor = ChatFormatting.AQUA;
+                            if (reward.color != null && reward.color.length() >= 2 && reward.color.startsWith("&")) {
+                                ChatFormatting parsedColor = ChatFormatting.getByCode(reward.color.charAt(1));
+                                if (parsedColor != null) rewardColor = parsedColor;
+                            }
+
+                            var numberComp = Component.literal(String.valueOf(pagesAfter)).withStyle(ChatFormatting.YELLOW);
+                            var rewardComp = Component.literal(amount + "x ").withStyle(rewardColor).append(savedItemName.withStyle(rewardColor));
+
+                            player.sendSystemMessage(Component.empty().append(prefix).append(Component.translatable("chat.r3ct_bestiary.milestone_reward", numberComp, rewardComp).withStyle(ChatFormatting.GREEN)));
+                        }
+                    }
+                }
+
+                checkAndAwardCompletedCategories(player, data);
+            }
         }
 
-        ModState.get(player.level().getServer()).setDirty();
         Services.PLATFORM.sendSyncDataPacketToClient(player, data.killCounts, data.rewardedCategories);
         handleLeaderboardRequest(player);
-    }
-
-    private static void handlePageUnlock(ServerPlayer player, EntityType<?> entityType, int pageNumber, int xpReward) {
-        player.giveExperiencePoints(xpReward);
-
-        player.level().playSound(null, player.blockPosition(),
-                net.minecraft.sounds.SoundEvents.UI_TOAST_CHALLENGE_COMPLETE,
-                net.minecraft.sounds.SoundSource.PLAYERS, 1.0F, 1.0F);
-
-        var prefix = Component.literal("[Bestiary] ").withStyle(ChatFormatting.RED);
-        var mobNameComp = entityType.getDescription().copy().withStyle(ChatFormatting.YELLOW);
-        var pageNumComp = Component.literal(String.valueOf(pageNumber)).withStyle(ChatFormatting.GOLD);
-
-        player.sendSystemMessage(
-                Component.empty()
-                        .append(prefix)
-                        .append(Component.translatable("chat.r3ct_bestiary.page_unlocked", pageNumComp, mobNameComp).withStyle(ChatFormatting.GREEN))
-        );
     }
 
     private static void checkAndAwardCompletedCategories(ServerPlayer player, PlayerData data) {
@@ -299,8 +305,11 @@ public class MobProgressHandler {
                     EntityType<?> type = BuiltInRegistries.ENTITY_TYPE.get(Identifier.parse(entityId)).map(net.minecraft.core.Holder::value).orElse(null);
                     if (type != null) {
                         List<Integer> thresholds = getProgressThresholds(entityId, type.getCategory());
-                        if (!thresholds.isEmpty() && count >= thresholds.get(0)) {
-                            gathered++;
+                        if (!thresholds.isEmpty()) {
+                            int maxReq = thresholds.get(thresholds.size() - 1);
+                            if (count >= maxReq) {
+                                gathered++;
+                            }
                         }
                     }
                 }
@@ -369,14 +378,14 @@ public class MobProgressHandler {
         net.minecraft.network.chat.MutableComponent customName = Component.literal(player.getName().getString())
                 .withStyle(ChatFormatting.AQUA)
                 .append(Component.literal(" - ").withStyle(ChatFormatting.LIGHT_PURPLE))
-                .append(Component.literal("Trofeum: " + categoryId.toUpperCase()).withStyle(ChatFormatting.LIGHT_PURPLE));
+                .append(Component.translatable("chat.r3ct_bestiary.trophy_name", categoryId.toUpperCase()).withStyle(ChatFormatting.LIGHT_PURPLE));
 
         ItemStack rewardStack = createCategoryTrophy(player, displayEntityId, allEntitiesInCat, customName);
         var savedTrophyName = rewardStack.getHoverName().copy();
 
         giveItemToPlayer(player, rewardStack);
 
-        var prefix = Component.literal("[Bestiary] ").withStyle(ChatFormatting.RED);
+        var prefix = Component.translatable("chat.r3ct_bestiary.prefix").withStyle(ChatFormatting.RED);
         var catNameComp = Component.literal(categoryId.toUpperCase()).withStyle(ChatFormatting.YELLOW);
         var trophyComp = savedTrophyName.withStyle(ChatFormatting.LIGHT_PURPLE);
 
@@ -408,7 +417,8 @@ public class MobProgressHandler {
 
         state.players.forEach((uuid, data) -> {
             String name = data.lastKnownName;
-            int leaderboardScore = getTotalValidKills(data);
+
+            int leaderboardScore = getTotalUnlockedPages(data);
 
             if (!name.equals("Unknown") && leaderboardScore > 0) {
                 allEntries.add(new LeaderboardDataPayload.TopPlayerEntry(name, leaderboardScore, new ArrayList<>(data.killCounts.keySet())));
@@ -466,7 +476,7 @@ public class MobProgressHandler {
             ModState.get(player.level().getServer()).setDirty();
             com.r3ct.bestiary.platform.Services.PLATFORM.sendSyncDataPacketToClient(player, data.killCounts, data.rewardedCategories);
 
-            player.sendSystemMessage(net.minecraft.network.chat.Component.literal("§d[DEV] Kategoria " + categoryId + " została wymaksowana!"));
+            player.sendSystemMessage(net.minecraft.network.chat.Component.translatable("chat.r3ct_bestiary.dev_category_complete", categoryId).withStyle(ChatFormatting.LIGHT_PURPLE));
         }
     }
 }

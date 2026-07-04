@@ -14,5 +14,6 @@ public abstract class PlayerRideMixin {
     private void r3ct_onPlayerTick(CallbackInfo ci) {
         ServerPlayer player = (ServerPlayer) (Object) this;
         MobProgressHandler.handlePlayerRidingTick(player);
+        MobProgressHandler.handlePlayerDolphinSwimTick(player);
     }
 }

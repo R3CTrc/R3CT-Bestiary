@@ -51,7 +51,7 @@ public class TrophySelectionScreen extends Screen {
         int windowX = (this.width - WINDOW_WIDTH) / 2;
         int windowY = (this.height - WINDOW_HEIGHT) / 2;
 
-        this.searchBox = new EditBox(this.font, windowX + 15, windowY + 20, 140, 16, Component.literal("Szukaj..."));
+        this.searchBox = new EditBox(this.font, windowX + 15, windowY + 20, 140, 16, Component.translatable("gui.r3ct_bestiary.search"));
         this.searchBox.setResponder(query -> {
             this.filteredEntities.clear();
             this.scrollOffset = 0;

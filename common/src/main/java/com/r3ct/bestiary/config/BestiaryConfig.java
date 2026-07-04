@@ -260,9 +260,9 @@ public class BestiaryConfig {
                 milestoneInterval = rewardsData.milestoneInterval;
                 if (rewardsData.milestoneRewards != null) milestoneRewards = rewardsData.milestoneRewards;
             }
-            System.out.println("[R3CT-Bestiary] Pomyślnie zsynchronizowano konfigurację serwera do RAMu!");
+            System.out.println("[R3CT-Bestiary] Successfully synchronized server config to RAM!");
         } catch (Exception e) {
-            System.err.println("[R3CT-Bestiary] Błąd podczas synchronizacji konfiguracji!");
+            System.err.println("[R3CT-Bestiary] Error during config synchronization!");
             e.printStackTrace();
         }
     }

@@ -88,7 +88,7 @@ public class BestiaryScreen extends Screen {
         if (type == null) return false;
 
         List<Integer> thresholds = MobProgressHandler.getProgressThresholds(entityId, type.getCategory());
-        return !thresholds.isEmpty() && count >= thresholds.get(0);
+        return !thresholds.isEmpty() && count >= thresholds.get(thresholds.size() - 1);
     }
 
     private int getGatheredCount(EntityTypeScanner.CategoryData cat) {
@@ -463,7 +463,7 @@ public class BestiaryScreen extends Screen {
                 guiGraphics.text(this.font, check, btnX + 8 - (textW / 2), btnY + 4, isBtnHovered ? 0xFFFFFFFF : 0xFFDDDDDD, true);
 
                 if (isBtnHovered) {
-                    guiGraphics.setTooltipForNextFrame(this.font, Component.literal("Zalicz kategorię (DEV)").withStyle(ChatFormatting.GREEN), rawMouseX, rawMouseY);
+                    guiGraphics.setTooltipForNextFrame(this.font, Component.translatable("gui.r3ct_bestiary.catalog.dev_complete").withStyle(ChatFormatting.GREEN), rawMouseX, rawMouseY);
                 }
             }
 
@@ -576,88 +576,55 @@ public class BestiaryScreen extends Screen {
             int currentKills = ClientPlayerData.killCounts.getOrDefault(entityId, 0);
 
             List<Integer> thresholds = type != null ? MobProgressHandler.getProgressThresholds(entityId, type.getCategory()) : java.util.Collections.singletonList(1);
-            int baseReq = thresholds.size() > 0 ? thresholds.get(0) : 1;
-            int star1Req = thresholds.size() > 1 ? thresholds.get(1) : baseReq;
-            int star2Req = thresholds.size() > 2 ? thresholds.get(2) : star1Req;
-            int star3Req = thresholds.size() > 3 ? thresholds.get(3) : star2Req;
+            if (thresholds.isEmpty()) thresholds = java.util.Collections.singletonList(1);
 
-            int targetReq;
-            int starLevel = 0;
-            boolean isCollected = currentKills >= baseReq;
+            int maxPages = thresholds.size();
+            int pagesUnlocked = 0;
 
-            if (currentKills >= star3Req && star3Req > baseReq) {
-                starLevel = 3;
-                targetReq = star3Req;
-            } else if (currentKills >= star2Req && star2Req > baseReq) {
-                starLevel = 2;
-                targetReq = star3Req;
-            } else if (currentKills >= star1Req && star1Req > baseReq) {
-                starLevel = 1;
-                targetReq = star2Req;
-            } else if (currentKills >= baseReq) {
-                starLevel = 0;
-                targetReq = star1Req;
-            } else {
-                starLevel = 0;
-                targetReq = baseReq;
+            for (int t : thresholds) {
+                if (currentKills >= t) pagesUnlocked++;
+                else break;
             }
 
-            if (thresholds.size() == 1) {
-                targetReq = baseReq;
-            }
-
+            boolean isFullyCollected = (pagesUnlocked == maxPages);
+            int targetReq = (pagesUnlocked < maxPages) ? thresholds.get(pagesUnlocked) : thresholds.get(maxPages - 1);
             int displayKills = Math.min(currentKills, targetReq);
+
+            int progressColor;
+            if (isFullyCollected) progressColor = 0xFF55FF55;
+            else if (currentKills > 0) progressColor = 0xFFFFAA00;
+            else progressColor = 0xFFFF5555;
 
             guiGraphics.fill(bgX, bgY, bgX + 18, bgY + 18, 0x1A3F220B);
             guiGraphics.fill(bgX, bgY, bgX + 18, bgY + 1, 0x2A3F220B);
             guiGraphics.fill(bgX, bgY, bgX + 1, bgY + 18, 0x2A3F220B);
 
-            Component gridIcon = null;
-            Component tooltipIcon = null;
-            int finalIconColor;
-            int progressColor;
-
-            if (isCollected) {
-                gridIcon = Component.literal("✔");
-                tooltipIcon = Component.literal("✔");
-                finalIconColor = 0xFF55FF55;
-                progressColor = (starLevel == 3) ? 0xFF55FF55 : 0xFFFFAA00;
-            } else if (currentKills > 0) {
-                gridIcon = null;
-                tooltipIcon = Component.literal("✘");
-                finalIconColor = 0xFFFF5555;
-                progressColor = 0xFFFFAA00;
-            } else {
-                gridIcon = null;
-                tooltipIcon = Component.literal("✘");
-                finalIconColor = 0xFFFF5555;
-                progressColor = 0xFFFF5555;
-            }
-
             int itemX = bgX + 1;
             int itemY = bgY + 1;
             guiGraphics.item(stack, itemX, itemY);
 
-            if (gridIcon != null) {
+            if (pagesUnlocked > 0) {
                 guiGraphics.fill(itemX, itemY, itemX + 16, itemY + 16, 0x66000000);
+            }
+
+            if (isFullyCollected) {
+                Component gridIcon = Component.literal("✔");
                 int iconW = this.font.width(gridIcon);
+                guiGraphics.text(this.font, gridIcon, itemX + 8 - (iconW / 2), itemY + 4, 0xFF55FF55, true);
+            } else if (pagesUnlocked > 0) {
+                guiGraphics.pose().pushMatrix();
+                float scale = 0.5f;
+                float bannerW = 16 * scale;
+                float totalWidth = pagesUnlocked * bannerW;
+                float startX = itemX + 8.0f - (totalWidth / 2.0f);
 
-                int checkY = starLevel > 0 ? itemY + 1 : itemY + 4;
-                guiGraphics.text(this.font, gridIcon, itemX + 8 - (iconW / 2), checkY, finalIconColor, true);
+                guiGraphics.pose().translate(startX, itemY + 4.0f);
+                guiGraphics.pose().scale(scale, scale);
 
-                if (starLevel > 0) {
-                    guiGraphics.pose().pushMatrix();
-                    float totalWidth = starLevel * 8.0f;
-                    float startX = itemX + 8.0f - (totalWidth / 2.0f);
-
-                    guiGraphics.pose().translate(startX, itemY + 10.0f);
-                    guiGraphics.pose().scale(0.5f, 0.5f);
-
-                    for (int s = 0; s < starLevel; s++) {
-                        guiGraphics.item(new ItemStack(Items.MOJANG_BANNER_PATTERN), s * 16, 0);
-                    }
-                    guiGraphics.pose().popMatrix();
+                for (int s = 0; s < pagesUnlocked; s++) {
+                    guiGraphics.item(new ItemStack(Items.MOJANG_BANNER_PATTERN), s * 16, 0);
                 }
+                guiGraphics.pose().popMatrix();
             }
 
             String progressTxt = displayKills + "/" + targetReq;
@@ -671,9 +638,11 @@ public class BestiaryScreen extends Screen {
                 List<Component> itemTooltip = new ArrayList<>();
                 Component originalName = type != null ? type.getDescription() : Component.literal(entityId);
 
-                Component modifiedName = originalName.copy().append(Component.literal(" "))
-                        .append(tooltipIcon.copy().withStyle(s -> s.withColor(finalIconColor).withBold(true)));
+                Component iconTxt = isFullyCollected ? Component.literal(" ✔").withStyle(ChatFormatting.GREEN) :
+                        (pagesUnlocked > 0 ? Component.literal(" ★").withStyle(ChatFormatting.YELLOW) :
+                                Component.empty());
 
+                Component modifiedName = originalName.copy().append(iconTxt);
                 itemTooltip.add(modifiedName);
 
                 if (type != null) {
@@ -687,14 +656,21 @@ public class BestiaryScreen extends Screen {
 
                 itemTooltip.add(Component.literal(" "));
 
-                int totalPages = (isCollected ? 1 : 0) + starLevel;
-                ChatFormatting pageColor = (starLevel == 3) ? ChatFormatting.GREEN : ChatFormatting.YELLOW;
+                for (int p = 0; p < maxPages; p++) {
+                    int req = thresholds.get(p);
+                    int killsForThisPage = Math.min(currentKills, req);
+                    int pageColorInt;
 
-                Component pageText = Component.translatable("gui.r3ct_bestiary.catalog.gathered_pages",
-                                Component.literal(String.valueOf(totalPages)).withStyle(pageColor))
-                        .withStyle(ChatFormatting.GRAY);
+                    if (killsForThisPage == req) pageColorInt = 0xFF55FF55;
+                    else if (killsForThisPage > 0) pageColorInt = 0xFFFFAA00;
+                    else pageColorInt = 0xFFFF5555;
 
-                itemTooltip.add(pageText);
+                    Component pageLine = Component.translatable("gui.r3ct_bestiary.catalog.page_prefix", (p + 1)).withStyle(ChatFormatting.GRAY)
+                            .append(Component.literal(killsForThisPage + " / " + req).withStyle(net.minecraft.network.chat.Style.EMPTY.withColor(pageColorInt)));
+                    itemTooltip.add(pageLine);
+                }
+
+                itemTooltip.add(Component.literal(" "));
                 itemTooltip.add(Component.translatable("gui.r3ct_bestiary.catalog.click_to_open").withStyle(ChatFormatting.DARK_GRAY));
 
                 guiGraphics.setComponentTooltipForNextFrame(this.font, itemTooltip, rawMouseX, rawMouseY);
@@ -710,20 +686,19 @@ public class BestiaryScreen extends Screen {
 
         net.minecraft.world.entity.LivingEntity dummy = getOrCreateDummy(selectedEntityId);
         int currentKills = ClientPlayerData.killCounts.getOrDefault(selectedEntityId, 0);
+
         List<Integer> thresholds = MobProgressHandler.getProgressThresholds(selectedEntityId, type.getCategory());
+        if (thresholds.isEmpty()) thresholds = java.util.Collections.singletonList(1);
 
-        int baseReq = thresholds.size() > 0 ? thresholds.get(0) : 1;
-        int star1Req = thresholds.size() > 1 ? thresholds.get(1) : baseReq;
-        int star2Req = thresholds.size() > 2 ? thresholds.get(2) : star1Req;
-        int star3Req = thresholds.size() > 3 ? thresholds.get(3) : star2Req;
+        int pagesUnlocked = 0;
+        for (int t : thresholds) {
+            if (currentKills >= t) pagesUnlocked++;
+            else break;
+        }
 
-        boolean isCollected = currentKills >= baseReq;
-        int starLevel = 0;
-        if (currentKills >= star3Req && star3Req > baseReq) starLevel = 3;
-        else if (currentKills >= star2Req && star2Req > baseReq) starLevel = 2;
-        else if (currentKills >= star1Req && star1Req > baseReq) starLevel = 1;
+        int maxPages = thresholds.size();
+        boolean isFullyCollected = pagesUnlocked == maxPages;
 
-        int totalPages = (isCollected ? 1 : 0) + starLevel;
         int centerX = bookX + (RENDER_SIZE / 2);
 
         int boxX0 = centerX - 60;
@@ -733,7 +708,7 @@ public class BestiaryScreen extends Screen {
 
         guiGraphics.fill(boxX0, boxY0, boxX1, boxY1, 0x11000000);
 
-        if (dummy != null && isCollected) {
+        if (dummy != null && pagesUnlocked >= 1) {
             if (this.minecraft != null && this.minecraft.level != null) {
                 dummy.tickCount = (int) (this.minecraft.level.getGameTime() % 10000);
             }
@@ -759,23 +734,30 @@ public class BestiaryScreen extends Screen {
         Component title = type.getDescription();
         guiGraphics.text(this.font, title, centerX - (this.font.width(title) / 2), bookY + 105, 0xFF000000, false);
 
-        ChatFormatting pageColor = (starLevel == 3) ? ChatFormatting.GREEN : ChatFormatting.YELLOW;
-        Component progressText = Component.translatable("gui.r3ct_bestiary.catalog.gathered_pages",
-                        Component.literal(String.valueOf(totalPages)).withStyle(pageColor))
-                .withStyle(ChatFormatting.DARK_GRAY);
+        int progressColor = isFullyCollected ? 0xFF55FF55 : (currentKills > 0 ? 0xFFFFAA00 : 0xFFFF5555);
+        Component progressText = Component.translatable("gui.r3ct_bestiary.details.pages_label").withStyle(ChatFormatting.DARK_GRAY)
+                .append(Component.literal(pagesUnlocked + " / " + maxPages).withStyle(net.minecraft.network.chat.Style.EMPTY.withColor(progressColor)));
 
         int textW = this.font.width(progressText);
-        int iconW = 10;
+        int iconW = isFullyCollected ? 10 : (pagesUnlocked > 0 ? (pagesUnlocked * 12) : 10);
         int totalW = textW + iconW + 2;
         int startX = centerX - (totalW / 2);
 
         guiGraphics.text(this.font, progressText, startX, bookY + 118, 0xFFFFFFFF, false);
 
-        guiGraphics.pose().pushMatrix();
-        guiGraphics.pose().translate(startX + textW + 2, bookY + 116);
-        guiGraphics.pose().scale(0.6f, 0.6f);
-        guiGraphics.item(new ItemStack(Items.MOJANG_BANNER_PATTERN), 0, 0);
-        guiGraphics.pose().popMatrix();
+        if (isFullyCollected) {
+            guiGraphics.text(this.font, Component.literal("✔").withStyle(ChatFormatting.GREEN), startX + textW + 2, bookY + 118, 0xFFFFFFFF, false);
+        } else if (pagesUnlocked > 0) {
+            guiGraphics.pose().pushMatrix();
+            guiGraphics.pose().translate(startX + textW + 2, bookY + 114);
+            guiGraphics.pose().scale(0.6f, 0.6f);
+            for(int s = 0; s < pagesUnlocked; s++){
+                guiGraphics.item(new ItemStack(Items.MOJANG_BANNER_PATTERN), s * 12, 0);
+            }
+            guiGraphics.pose().popMatrix();
+        } else {
+            guiGraphics.text(this.font, Component.literal("✘").withStyle(ChatFormatting.RED), startX + textW + 2, bookY + 118, 0xFFFFFFFF, false);
+        }
 
         int textX = bookX + 50;
         int listStartY = bookY + 135;
@@ -801,7 +783,7 @@ public class BestiaryScreen extends Screen {
         Component infoTitle = Component.translatable("gui.r3ct_bestiary.details.general_info").withStyle(ChatFormatting.BOLD, ChatFormatting.DARK_GRAY);
         guiGraphics.text(this.font, infoTitle, textX, currentY, 0xFFFFFFFF, false); currentY += 12;
 
-        if (totalPages >= 1) {
+        if (pagesUnlocked >= 1) {
             String typeKey = "gui.r3ct_bestiary.family.default";
             var holder = type.builtInRegistryHolder();
             if (holder.is(net.minecraft.tags.EntityTypeTags.UNDEAD)) typeKey = "gui.r3ct_bestiary.family.undead";
@@ -825,7 +807,7 @@ public class BestiaryScreen extends Screen {
         Component bodyTitle = Component.translatable("gui.r3ct_bestiary.details.body_structure").withStyle(ChatFormatting.BOLD, ChatFormatting.DARK_GRAY);
         guiGraphics.text(this.font, bodyTitle, textX, currentY, 0xFFFFFFFF, false); currentY += 12;
 
-        if (totalPages >= 2 && dummy != null) {
+        if (pagesUnlocked >= 2 && dummy != null) {
             int hp = Math.round(dummy.getMaxHealth());
             int armor = dummy.getArmorValue();
             String size = String.format(java.util.Locale.US, "%.1fm x %.1fm", dummy.getBbWidth(), dummy.getBbHeight());
@@ -855,7 +837,7 @@ public class BestiaryScreen extends Screen {
         Component habitsTitle = Component.translatable("gui.r3ct_bestiary.details.habits_and_attack").withStyle(net.minecraft.ChatFormatting.BOLD, net.minecraft.ChatFormatting.DARK_GRAY);
         guiGraphics.text(this.font, habitsTitle, textX, currentY, 0xFFFFFFFF, false); currentY += 12;
 
-        if (totalPages >= 3 && dummy != null) {
+        if (pagesUnlocked >= 3 && dummy != null) {
             Component dmgVal = Component.translatable("gui.r3ct_bestiary.details.none");
 
             var dmgAttr = dummy.getAttribute(net.minecraft.world.entity.ai.attributes.Attributes.ATTACK_DAMAGE);
@@ -924,7 +906,7 @@ public class BestiaryScreen extends Screen {
         Component resistTitle = Component.translatable("gui.r3ct_bestiary.details.resistances").withStyle(ChatFormatting.BOLD, ChatFormatting.DARK_GRAY);
         guiGraphics.text(this.font, resistTitle, textX, currentY, 0xFFFFFFFF, false); currentY += 12;
 
-        if (totalPages >= 4 && dummy != null) {
+        if (pagesUnlocked >= 4 && dummy != null) {
             Component fireVal = dummy.fireImmune() ? Component.translatable("gui.r3ct_bestiary.details.yes").withStyle(ChatFormatting.DARK_GREEN) : Component.translatable("gui.r3ct_bestiary.details.no").withStyle(ChatFormatting.RED);
 
             String kbStr = "0%";

@@ -12,6 +12,7 @@
     "BucketableMixin",
     "CuredZombieVillagerMixin",
     "DolphinMixin",
+    "FishingMixin",
     "GoatMixin",
     "GuiGraphicsMixin",
     "IronGolemMixin",
