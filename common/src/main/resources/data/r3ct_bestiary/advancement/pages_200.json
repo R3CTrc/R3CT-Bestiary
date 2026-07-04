@@ -1,0 +1,15 @@
+{
+  "parent": "r3ct_bestiary:pages_100",
+  "display": {
+    "icon": { "id": "minecraft:enchanted_book" },
+    "title": { "translate": "advancement.r3ct_bestiary.pages_200.title" },
+    "description": { "translate": "advancement.r3ct_bestiary.pages_200.desc" },
+    "frame": "challenge",
+    "show_toast": true,
+    "announce_to_chat": true,
+    "hidden": false
+  },
+  "criteria": {
+    "trigger": { "trigger": "minecraft:impossible" }
+  }
+}

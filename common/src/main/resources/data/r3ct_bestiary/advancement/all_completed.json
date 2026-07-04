@@ -1,9 +1,9 @@
 {
-  "parent": "r3ct_collection:category_5",
+  "parent": "r3ct_bestiary:category_2",
   "display": {
     "icon": { "id": "minecraft:nether_star" },
-    "title": { "translate": "advancement.r3ct_collection.all_completed.title" },
-    "description": { "translate": "advancement.r3ct_collection.all_completed.desc" },
+    "title": { "translate": "advancement.r3ct_bestiary.all_completed.title" },
+    "description": { "translate": "advancement.r3ct_bestiary.all_completed.desc" },
     "frame": "challenge",
     "show_toast": true,
     "announce_to_chat": true,

@@ -1,9 +1,9 @@
 {
   "parent": "r3ct_bestiary:root",
   "display": {
-    "icon": { "id": "r3ct_bestiary:trophy" },
-    "title": { "translate": "advancement.r3ct_bestiary.category_1.title" },
-    "description": { "translate": "advancement.r3ct_bestiary.category_1.desc" },
+    "icon": { "id": "minecraft:paper" },
+    "title": { "translate": "advancement.r3ct_bestiary.first_page.title" },
+    "description": { "translate": "advancement.r3ct_bestiary.first_page.desc" },
     "frame": "task",
     "show_toast": true,
     "announce_to_chat": true,

@@ -1,0 +1,15 @@
+{
+  "parent": "r3ct_bestiary:pages_50",
+  "display": {
+    "icon": { "id": "minecraft:knowledge_book" },
+    "title": { "translate": "advancement.r3ct_bestiary.pages_100.title" },
+    "description": { "translate": "advancement.r3ct_bestiary.pages_100.desc" },
+    "frame": "goal",
+    "show_toast": true,
+    "announce_to_chat": true,
+    "hidden": false
+  },
+  "criteria": {
+    "trigger": { "trigger": "minecraft:impossible" }
+  }
+}

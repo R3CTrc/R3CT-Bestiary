@@ -75,6 +75,9 @@ public class EntityTypeScanner {
             else if (modOverride != null && !modOverride.isEmpty()) {
                 type = modOverride;
             }
+            else if (entityType.builtInRegistryHolder().is(com.r3ct.bestiary.logic.ModTags.C_BOSSES)) {
+                type = "bosses";
+            }
             else if (category == MobCategory.MONSTER) {
                 type = "monsters";
             }

@@ -14,9 +14,10 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 public abstract class SummonedEntityMixin {
 
     @Inject(method = "trigger", at = @At("HEAD"))
-    private void onEntitySummoned(ServerPlayer player, Entity entity, CallbackInfo ci) {
+    private void r3ct_onEntitySummoned(ServerPlayer player, Entity entity, CallbackInfo ci) {
         String entityId = BuiltInRegistries.ENTITY_TYPE.getKey(entity.getType()).toString();
-        String bestiaryCat = MobProgressHandler.getBestiaryCategory(entityId, entity.getType().getCategory());
+
+        String bestiaryCat = MobProgressHandler.getBestiaryCategory(entityId, entity.getType());
 
         if (!bestiaryCat.equals("bosses")) {
             MobProgressHandler.handleMobBuild(player, entity.getType());

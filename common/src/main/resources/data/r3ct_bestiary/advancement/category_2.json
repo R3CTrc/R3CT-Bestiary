@@ -1,0 +1,15 @@
+{
+  "parent": "r3ct_bestiary:category_1",
+  "display": {
+    "icon": { "id": "minecraft:skeleton_skull" },
+    "title": { "translate": "advancement.r3ct_bestiary.category_2.title" },
+    "description": { "translate": "advancement.r3ct_bestiary.category_2.desc" },
+    "frame": "goal",
+    "show_toast": true,
+    "announce_to_chat": true,
+    "hidden": false
+  },
+  "criteria": {
+    "trigger": { "trigger": "minecraft:impossible" }
+  }
+}

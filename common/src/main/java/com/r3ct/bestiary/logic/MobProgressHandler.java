@@ -37,7 +37,7 @@ public class MobProgressHandler {
         }
     }
 
-    public static String getBestiaryCategory(String entityId, MobCategory category) {
+    public static String getBestiaryCategory(String entityId, EntityType<?> type) {
         String namespace = entityId.split(":")[0];
         String mobOverride = BestiaryConfig.mobCategoryOverrides.get(entityId);
         String modOverride = BestiaryConfig.modCategoryOverrides.get(namespace);
@@ -48,18 +48,21 @@ public class MobProgressHandler {
         if (modOverride != null && !modOverride.isEmpty()) {
             return modOverride;
         }
-        if (category == MobCategory.MONSTER) {
+        if (type != null && type.builtInRegistryHolder().is(ModTags.C_BOSSES)) {
+            return "bosses";
+        }
+        if (type != null && type.getCategory() == MobCategory.MONSTER) {
             return "monsters";
         }
         return "creatures";
     }
 
-    public static List<Integer> getProgressThresholds(String entityId, MobCategory category) {
+    public static List<Integer> getProgressThresholds(String entityId, EntityType<?> type) {
         if (BestiaryConfig.customProgressRequirements.containsKey(entityId)) {
             return BestiaryConfig.customProgressRequirements.get(entityId);
         }
 
-        String bestiaryCat = getBestiaryCategory(entityId, category);
+        String bestiaryCat = getBestiaryCategory(entityId, type);
 
         if (bestiaryCat.equals("bosses")) {
             return BestiaryConfig.defaultProgressBosses;
@@ -77,7 +80,7 @@ public class MobProgressHandler {
 
             EntityType<?> type = BuiltInRegistries.ENTITY_TYPE.get(Identifier.parse(entityId)).map(net.minecraft.core.Holder::value).orElse(null);
             if (type != null) {
-                List<Integer> thresholds = getProgressThresholds(entityId, type.getCategory());
+                List<Integer> thresholds = getProgressThresholds(entityId, type);
                 for (int t : thresholds) {
                     if (count >= t) {
                         totalPages++;
@@ -209,7 +212,7 @@ public class MobProgressHandler {
         int pagesAfter = getTotalUnlockedPages(data);
 
         if (pagesAfter > pagesBefore) {
-            List<Integer> thresholds = getProgressThresholds(entityId, category);
+            List<Integer> thresholds = getProgressThresholds(entityId, entityType);
             int unlockedPageIndex = -1;
 
             for (int i = 0; i < thresholds.size(); i++) {
@@ -222,7 +225,7 @@ public class MobProgressHandler {
             if (unlockedPageIndex != -1) {
                 int pageNumber = unlockedPageIndex + 1;
 
-                String bestiaryCat = getBestiaryCategory(entityId, category);
+                String bestiaryCat = getBestiaryCategory(entityId, entityType);
                 List<Integer> xpThresholds;
                 if (bestiaryCat.equals("bosses")) {
                     xpThresholds = BestiaryConfig.xpBosses;
@@ -247,10 +250,14 @@ public class MobProgressHandler {
                     player.sendSystemMessage(Component.empty().append(prefix).append(Component.translatable("chat.r3ct_bestiary.page_unlocked", pageNumComp, mobNameComp).withStyle(ChatFormatting.GREEN)));
                 }
 
-                if (pagesAfter >= 1 && pagesBefore < 1) grantAdvancement(player, "r3ct_bestiary:first_item");
-                if (pagesAfter >= 100 && pagesBefore < 100) grantAdvancement(player, "r3ct_bestiary:items_100");
-                if (pagesAfter >= 500 && pagesBefore < 500) grantAdvancement(player, "r3ct_bestiary:items_500");
-                if (pagesAfter >= 1000 && pagesBefore < 1000) grantAdvancement(player, "r3ct_bestiary:items_1000");
+                if (pagesAfter >= 1 && pagesBefore < 1) grantAdvancement(player, "r3ct_bestiary:first_page");
+                if (pagesAfter >= 50 && pagesBefore < 50) grantAdvancement(player, "r3ct_bestiary:pages_50");
+                if (pagesAfter >= 100 && pagesBefore < 100) grantAdvancement(player, "r3ct_bestiary:pages_100");
+                if (pagesAfter >= 200 && pagesBefore < 200) grantAdvancement(player, "r3ct_bestiary:pages_200");
+
+                if (pageNumber == thresholds.size()) {
+                    grantAdvancement(player, "r3ct_bestiary:first_maxed");
+                }
 
                 int interval = BestiaryConfig.milestoneInterval;
                 if (interval > 0 && (pagesBefore / interval < pagesAfter / interval)) {
@@ -304,7 +311,7 @@ public class MobProgressHandler {
 
                     EntityType<?> type = BuiltInRegistries.ENTITY_TYPE.get(Identifier.parse(entityId)).map(net.minecraft.core.Holder::value).orElse(null);
                     if (type != null) {
-                        List<Integer> thresholds = getProgressThresholds(entityId, type.getCategory());
+                        List<Integer> thresholds = getProgressThresholds(entityId, type);
                         if (!thresholds.isEmpty()) {
                             int maxReq = thresholds.get(thresholds.size() - 1);
                             if (count >= maxReq) {
@@ -401,7 +408,7 @@ public class MobProgressHandler {
         if (data.rewardedCategories.contains("ALL_COMPLETED")) catSize--;
 
         if (catSize >= 1) grantAdvancement(player, "r3ct_bestiary:category_1");
-        if (catSize >= 5) grantAdvancement(player, "r3ct_bestiary:category_5");
+        if (catSize >= 2) grantAdvancement(player, "r3ct_bestiary:category_2");
 
         ModState.get(player.level().getServer()).setDirty();
         Services.PLATFORM.sendSyncDataPacketToClient(player, data.killCounts, data.rewardedCategories);
@@ -463,7 +470,7 @@ public class MobProgressHandler {
             for (String entityId : catData.entityIds) {
                 net.minecraft.world.entity.EntityType<?> type = net.minecraft.core.registries.BuiltInRegistries.ENTITY_TYPE.get(net.minecraft.resources.Identifier.parse(entityId)).map(net.minecraft.core.Holder::value).orElse(null);
                 if (type != null) {
-                    java.util.List<Integer> thresholds = getProgressThresholds(entityId, type.getCategory());
+                    java.util.List<Integer> thresholds = getProgressThresholds(entityId, type);
                     if (!thresholds.isEmpty()) {
                         int maxReq = thresholds.get(thresholds.size() - 1);
                         data.killCounts.put(entityId, maxReq);

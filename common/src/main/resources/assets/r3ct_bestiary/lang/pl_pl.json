@@ -89,12 +89,22 @@
   "mobcategory.monsters": "Potwory",
   "mobcategory.creatures": "Stworzenia",
 
-  "advancement.r3ct_bestiary.root.title": "R3CT Bestiary",
+  "advancement.r3ct_bestiary.root.title": "Bestiariusz R3CT",
   "advancement.r3ct_bestiary.root.desc": "Otwórz Bestiariusz i rozpocznij wielkie łowy.",
-  "advancement.r3ct_bestiary.first_kill.title": "Pierwsze Łowy",
-  "advancement.r3ct_bestiary.first_kill.desc": "Zbadaj swój pierwszy gatunek do Bestiariusza!",
-  "advancement.r3ct_bestiary.mobs_100.title": "Pogromca Potworów",
-  "advancement.r3ct_bestiary.mobs_100.desc": "Zbadaj w pełni 100 gatunków.",
+  "advancement.r3ct_bestiary.first_page.title": "Pierwsze Strony",
+  "advancement.r3ct_bestiary.first_page.desc": "Odblokuj pierwszą stronę wiedzy w Bestiariuszu!",
+  "advancement.r3ct_bestiary.pages_50.title": "Pilny Uczeń",
+  "advancement.r3ct_bestiary.pages_50.desc": "Odblokuj 50 stron wiedzy.",
+  "advancement.r3ct_bestiary.pages_100.title": "Pogromca Potworów",
+  "advancement.r3ct_bestiary.pages_100.desc": "Odblokuj 100 stron wiedzy.",
+  "advancement.r3ct_bestiary.pages_200.title": "Żywa Encyklopedia",
+  "advancement.r3ct_bestiary.pages_200.desc": "Odblokuj 200 stron wiedzy.",
+  "advancement.r3ct_bestiary.category_1.title": "Pierwsze Trofeum",
+  "advancement.r3ct_bestiary.category_1.desc": "Zbadaj w pełni jedną całą kategorię mobów.",
+  "advancement.r3ct_bestiary.category_2.title": "Doświadczony Kustosz",
+  "advancement.r3ct_bestiary.category_2.desc": "Zbadaj w pełni 2 różne kategorie mobów.",
   "advancement.r3ct_bestiary.all_completed.title": "Mistrz Bestiariusza",
-  "advancement.r3ct_bestiary.all_completed.desc": "Wypełnij cały Bestiariusz w 100%!"
+  "advancement.r3ct_bestiary.all_completed.desc": "Wypełnij cały Bestiariusz w 100%!",
+  "advancement.r3ct_bestiary.first_maxed.title": "Kompletna Anatomia",
+  "advancement.r3ct_bestiary.first_maxed.desc": "Zbadaj w pełni wszystkie 4 strony pojedynczego gatunku."
 }

@@ -87,7 +87,7 @@ public class BestiaryScreen extends Screen {
         EntityType<?> type = net.minecraft.core.registries.BuiltInRegistries.ENTITY_TYPE.get(Identifier.parse(entityId)).map(net.minecraft.core.Holder::value).orElse(null);
         if (type == null) return false;
 
-        List<Integer> thresholds = MobProgressHandler.getProgressThresholds(entityId, type.getCategory());
+        List<Integer> thresholds = MobProgressHandler.getProgressThresholds(entityId, type);
         return !thresholds.isEmpty() && count >= thresholds.get(thresholds.size() - 1);
     }
 
@@ -575,7 +575,7 @@ public class BestiaryScreen extends Screen {
 
             int currentKills = ClientPlayerData.killCounts.getOrDefault(entityId, 0);
 
-            List<Integer> thresholds = type != null ? MobProgressHandler.getProgressThresholds(entityId, type.getCategory()) : java.util.Collections.singletonList(1);
+            List<Integer> thresholds = type != null ? MobProgressHandler.getProgressThresholds(entityId, type) : java.util.Collections.singletonList(1);
             if (thresholds.isEmpty()) thresholds = java.util.Collections.singletonList(1);
 
             int maxPages = thresholds.size();
@@ -646,7 +646,7 @@ public class BestiaryScreen extends Screen {
                 itemTooltip.add(modifiedName);
 
                 if (type != null) {
-                    String bestiaryCat = MobProgressHandler.getBestiaryCategory(entityId, type.getCategory());
+                    String bestiaryCat = MobProgressHandler.getBestiaryCategory(entityId, type);
                     if (bestiaryCat.equals("creatures")) {
                         itemTooltip.add(Component.translatable("gui.r3ct_bestiary.catalog.action.any").withStyle(ChatFormatting.GREEN));
                     } else {
@@ -687,7 +687,7 @@ public class BestiaryScreen extends Screen {
         net.minecraft.world.entity.LivingEntity dummy = getOrCreateDummy(selectedEntityId);
         int currentKills = ClientPlayerData.killCounts.getOrDefault(selectedEntityId, 0);
 
-        List<Integer> thresholds = MobProgressHandler.getProgressThresholds(selectedEntityId, type.getCategory());
+        List<Integer> thresholds = MobProgressHandler.getProgressThresholds(selectedEntityId, type);
         if (thresholds.isEmpty()) thresholds = java.util.Collections.singletonList(1);
 
         int pagesUnlocked = 0;

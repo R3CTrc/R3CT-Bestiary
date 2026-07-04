@@ -1,0 +1,15 @@
+{
+  "parent": "r3ct_bestiary:first_page",
+  "display": {
+    "icon": { "id": "minecraft:zombie_head" },
+    "title": { "translate": "advancement.r3ct_bestiary.first_maxed.title" },
+    "description": { "translate": "advancement.r3ct_bestiary.first_maxed.desc" },
+    "frame": "goal",
+    "show_toast": true,
+    "announce_to_chat": true,
+    "hidden": false
+  },
+  "criteria": {
+    "trigger": { "trigger": "minecraft:impossible" }
+  }
+}
