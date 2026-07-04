@@ -25,12 +25,14 @@
   },
 
   "_comment_defaults": "Progress requirements array (kills/breeds/tames): [Base (Checkmark), Star 1, Star 2, Star 3].",
-  "defaultProgressBosses": [1, 2, 3, 4],
-  "defaultProgressMonsters": [10, 20, 30, 40],
-  "defaultProgressCreatures": [1, 2, 3, 4],
+  "defaultProgressBosses": [1, 2, 3, 5],
+  "defaultProgressMonsters": [5, 15, 30, 50],
+  "defaultProgressCreatures": [5, 15, 30, 50],
 
   "_comment_custom_progress": "Overrides the default progress requirements array for specific mobs.",
-  "customProgressRequirements": {},
+  "customProgressRequirements": {
+
+  },
 
   "_comment_mechanics": "Settings for specific interaction mechanics.",
   "interactionCooldownMinutes": 30,

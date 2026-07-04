@@ -14,28 +14,35 @@
   "_comment_INFO_9": "=========================================================================",
 
   "_comment_xp": "Experience points rewarded when fully researching a mob: [Base (Checkmark), Star 1, Star 2, Star 3].",
-  "xpBosses": [500, 1500, 3000, 5000],
-  "xpMonsters": [100, 500, 1500, 3000],
-  "xpCreatures": [50, 250, 1000, 2000],
+  "xpBosses": [100, 250, 250, 250],
+  "xpMonsters": [15, 30, 50, 75],
+  "xpCreatures": [10, 25, 50, 75],
 
   "_comment_interval": "How often (every X fully researched species) the player receives a milestone reward.",
-  "milestoneInterval": 10,
+  "milestoneInterval": 25,
 
-  "_comment_milestones": "Loot pool for milestone rewards. 'chance' determines the probability of dropping.",
+  "_comment_milestones": "Loot pool for milestone rewards.",
   "milestoneRewards": [
     {
       "item": "minecraft:emerald",
       "min_amount": 24,
       "max_amount": 32,
-      "chance": 50,
+      "chance": 45,
       "color": "&a"
     },
     {
       "item": "minecraft:diamond",
       "min_amount": 16,
       "max_amount": 24,
-      "chance": 50,
+      "chance": 45,
       "color": "&b"
+    },
+    {
+      "item": "minecraft:netherite_scrap",
+      "min_amount": 1,
+      "max_amount": 2,
+      "chance": 10,
+      "color": "&5"
     }
   ]
 }
