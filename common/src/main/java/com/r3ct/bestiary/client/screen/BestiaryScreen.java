@@ -19,6 +19,7 @@ import org.jspecify.annotations.NonNull;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Set;
 
 public class BestiaryScreen extends Screen {
 
@@ -83,12 +84,14 @@ public class BestiaryScreen extends Screen {
     }
 
     private boolean isCompleted(String entityId) {
-        int count = ClientPlayerData.killCounts.getOrDefault(entityId, 0);
-        EntityType<?> type = net.minecraft.core.registries.BuiltInRegistries.ENTITY_TYPE.get(Identifier.parse(entityId)).map(net.minecraft.core.Holder::value).orElse(null);
-        if (type == null) return false;
+        net.minecraft.world.entity.LivingEntity dummy = getOrCreateDummy(entityId);
+        if (dummy == null) return false;
 
-        List<Integer> thresholds = MobProgressHandler.getProgressThresholds(entityId, type);
-        return !thresholds.isEmpty() && count >= thresholds.get(thresholds.size() - 1);
+        List<String> required = MobProgressHandler.getRequiredActions(dummy);
+        if (required.isEmpty()) return true;
+
+        Set<String> unlocked = ClientPlayerData.unlockedActions.getOrDefault(entityId, new java.util.HashSet<>());
+        return unlocked.containsAll(required);
     }
 
     private int getGatheredCount(EntityTypeScanner.CategoryData cat) {
@@ -573,27 +576,16 @@ public class BestiaryScreen extends Screen {
             EntityType<?> type = net.minecraft.core.registries.BuiltInRegistries.ENTITY_TYPE.get(Identifier.parse(entityId)).map(net.minecraft.core.Holder::value).orElse(null);
             ItemStack stack = getSpawnEggForEntity(entityId);
 
-            int currentKills = ClientPlayerData.killCounts.getOrDefault(entityId, 0);
+            net.minecraft.world.entity.LivingEntity dummy = getOrCreateDummy(entityId);
+            List<String> required = dummy != null ? MobProgressHandler.getRequiredActions(dummy) : java.util.Collections.emptyList();
+            Set<String> unlocked = ClientPlayerData.unlockedActions.getOrDefault(entityId, new java.util.HashSet<>());
 
-            List<Integer> thresholds = type != null ? MobProgressHandler.getProgressThresholds(entityId, type) : java.util.Collections.singletonList(1);
-            if (thresholds.isEmpty()) thresholds = java.util.Collections.singletonList(1);
-
-            int maxPages = thresholds.size();
-            int pagesUnlocked = 0;
-
-            for (int t : thresholds) {
-                if (currentKills >= t) pagesUnlocked++;
-                else break;
+            int unlockedCount = 0;
+            for (String req : required) {
+                if (unlocked.contains(req)) unlockedCount++;
             }
 
-            boolean isFullyCollected = (pagesUnlocked == maxPages);
-            int targetReq = (pagesUnlocked < maxPages) ? thresholds.get(pagesUnlocked) : thresholds.get(maxPages - 1);
-            int displayKills = Math.min(currentKills, targetReq);
-
-            int progressColor;
-            if (isFullyCollected) progressColor = 0xFF55FF55;
-            else if (currentKills > 0) progressColor = 0xFFFFAA00;
-            else progressColor = 0xFFFF5555;
+            boolean isFullyCollected = !required.isEmpty() && unlockedCount == required.size();
 
             guiGraphics.fill(bgX, bgY, bgX + 18, bgY + 18, 0x1A3F220B);
             guiGraphics.fill(bgX, bgY, bgX + 18, bgY + 1, 0x2A3F220B);
@@ -603,71 +595,31 @@ public class BestiaryScreen extends Screen {
             int itemY = bgY + 1;
             guiGraphics.item(stack, itemX, itemY);
 
-            if (pagesUnlocked > 0) {
-                guiGraphics.fill(itemX, itemY, itemX + 16, itemY + 16, 0x66000000);
-            }
-
             if (isFullyCollected) {
+                guiGraphics.fill(itemX, itemY, itemX + 16, itemY + 16, 0x66000000);
+
                 Component gridIcon = Component.literal("✔");
                 int iconW = this.font.width(gridIcon);
                 guiGraphics.text(this.font, gridIcon, itemX + 8 - (iconW / 2), itemY + 4, 0xFF55FF55, true);
-            } else if (pagesUnlocked > 0) {
-                guiGraphics.pose().pushMatrix();
-                float scale = 0.5f;
-                float bannerW = 16 * scale;
-                float totalWidth = pagesUnlocked * bannerW;
-                float startX = itemX + 8.0f - (totalWidth / 2.0f);
-
-                guiGraphics.pose().translate(startX, itemY + 4.0f);
-                guiGraphics.pose().scale(scale, scale);
-
-                for (int s = 0; s < pagesUnlocked; s++) {
-                    guiGraphics.item(new ItemStack(Items.MOJANG_BANNER_PATTERN), s * 16, 0);
-                }
-                guiGraphics.pose().popMatrix();
             }
-
-            String progressTxt = displayKills + "/" + targetReq;
-            int progressW = this.font.width(progressTxt);
-            int progressX = slotX + (cellW - progressW) / 2;
-            int progressY = bgY + 22;
-
-            guiGraphics.text(this.font, progressTxt, progressX, progressY, progressColor, false);
 
             if (scaledMouseX >= slotX && scaledMouseX < slotX + cellW && scaledMouseY >= slotY && scaledMouseY < slotY + cellH) {
                 List<Component> itemTooltip = new ArrayList<>();
                 Component originalName = type != null ? type.getDescription() : Component.literal(entityId);
 
-                Component iconTxt = isFullyCollected ? Component.literal(" ✔").withStyle(ChatFormatting.GREEN) :
-                        (pagesUnlocked > 0 ? Component.literal(" ★").withStyle(ChatFormatting.YELLOW) :
-                                Component.empty());
-
-                Component modifiedName = originalName.copy().append(iconTxt);
+                Component iconTxt = isFullyCollected ? Component.literal(" ✔").withStyle(ChatFormatting.GREEN) : Component.empty();
+                Component modifiedName = originalName.copy().withStyle(isFullyCollected ? ChatFormatting.GREEN : ChatFormatting.GOLD).append(iconTxt);
                 itemTooltip.add(modifiedName);
-
-                if (type != null) {
-                    String bestiaryCat = MobProgressHandler.getBestiaryCategory(entityId, type);
-                    if (bestiaryCat.equals("creatures")) {
-                        itemTooltip.add(Component.translatable("gui.r3ct_bestiary.catalog.action.any").withStyle(ChatFormatting.GREEN));
-                    } else {
-                        itemTooltip.add(Component.translatable("gui.r3ct_bestiary.catalog.action.kill").withStyle(ChatFormatting.RED));
-                    }
-                }
-
                 itemTooltip.add(Component.literal(" "));
 
-                for (int p = 0; p < maxPages; p++) {
-                    int req = thresholds.get(p);
-                    int killsForThisPage = Math.min(currentKills, req);
-                    int pageColorInt;
+                for (String req : required) {
+                    boolean done = unlocked.contains(req);
+                    String checkIcon = done ? "✔" : "✘";
+                    ChatFormatting color = done ? ChatFormatting.GREEN : ChatFormatting.RED;
 
-                    if (killsForThisPage == req) pageColorInt = 0xFF55FF55;
-                    else if (killsForThisPage > 0) pageColorInt = 0xFFFFAA00;
-                    else pageColorInt = 0xFFFF5555;
-
-                    Component pageLine = Component.translatable("gui.r3ct_bestiary.catalog.page_prefix", (p + 1)).withStyle(ChatFormatting.GRAY)
-                            .append(Component.literal(killsForThisPage + " / " + req).withStyle(net.minecraft.network.chat.Style.EMPTY.withColor(pageColorInt)));
-                    itemTooltip.add(pageLine);
+                    Component actionLine = Component.literal("[" + checkIcon + "] ").withStyle(color)
+                            .append(Component.translatable("action.r3ct_bestiary." + req).withStyle(ChatFormatting.GRAY));
+                    itemTooltip.add(actionLine);
                 }
 
                 itemTooltip.add(Component.literal(" "));
@@ -685,19 +637,16 @@ public class BestiaryScreen extends Screen {
         if (type == null) return;
 
         net.minecraft.world.entity.LivingEntity dummy = getOrCreateDummy(selectedEntityId);
-        int currentKills = ClientPlayerData.killCounts.getOrDefault(selectedEntityId, 0);
+        List<String> required = dummy != null ? MobProgressHandler.getRequiredActions(dummy) : java.util.Collections.emptyList();
+        Set<String> unlocked = ClientPlayerData.unlockedActions.getOrDefault(selectedEntityId, new java.util.HashSet<>());
 
-        List<Integer> thresholds = MobProgressHandler.getProgressThresholds(selectedEntityId, type);
-        if (thresholds.isEmpty()) thresholds = java.util.Collections.singletonList(1);
-
-        int pagesUnlocked = 0;
-        for (int t : thresholds) {
-            if (currentKills >= t) pagesUnlocked++;
-            else break;
+        int unlockedCount = 0;
+        for (String req : required) {
+            if (unlocked.contains(req)) unlockedCount++;
         }
 
-        int maxPages = thresholds.size();
-        boolean isFullyCollected = pagesUnlocked == maxPages;
+        int maxTasks = required.size();
+        boolean isFullyCollected = maxTasks > 0 && unlockedCount == maxTasks;
 
         int centerX = bookX + (RENDER_SIZE / 2);
 
@@ -708,7 +657,7 @@ public class BestiaryScreen extends Screen {
 
         guiGraphics.fill(boxX0, boxY0, boxX1, boxY1, 0x11000000);
 
-        if (dummy != null && pagesUnlocked >= 1) {
+        if (dummy != null && isFullyCollected) {
             if (this.minecraft != null && this.minecraft.level != null) {
                 dummy.tickCount = (int) (this.minecraft.level.getGameTime() % 10000);
             }
@@ -734,12 +683,12 @@ public class BestiaryScreen extends Screen {
         Component title = type.getDescription();
         guiGraphics.text(this.font, title, centerX - (this.font.width(title) / 2), bookY + 105, 0xFF000000, false);
 
-        int progressColor = isFullyCollected ? 0xFF55FF55 : (currentKills > 0 ? 0xFFFFAA00 : 0xFFFF5555);
-        Component progressText = Component.translatable("gui.r3ct_bestiary.details.pages_label").withStyle(ChatFormatting.DARK_GRAY)
-                .append(Component.literal(pagesUnlocked + " / " + maxPages).withStyle(net.minecraft.network.chat.Style.EMPTY.withColor(progressColor)));
+        int progressColor = isFullyCollected ? 0xFF55FF55 : (unlockedCount > 0 ? 0xFFFFAA00 : 0xFFFF5555);
+        Component progressText = Component.translatable("gui.r3ct_bestiary.details.tasks_label").withStyle(ChatFormatting.DARK_GRAY)
+                .append(Component.literal(unlockedCount + " / " + maxTasks).withStyle(net.minecraft.network.chat.Style.EMPTY.withColor(progressColor)));
 
         int textW = this.font.width(progressText);
-        int iconW = isFullyCollected ? 10 : (pagesUnlocked > 0 ? (pagesUnlocked * 12) : 10);
+        int iconW = 10;
         int totalW = textW + iconW + 2;
         int startX = centerX - (totalW / 2);
 
@@ -747,14 +696,6 @@ public class BestiaryScreen extends Screen {
 
         if (isFullyCollected) {
             guiGraphics.text(this.font, Component.literal("✔").withStyle(ChatFormatting.GREEN), startX + textW + 2, bookY + 118, 0xFFFFFFFF, false);
-        } else if (pagesUnlocked > 0) {
-            guiGraphics.pose().pushMatrix();
-            guiGraphics.pose().translate(startX + textW + 2, bookY + 114);
-            guiGraphics.pose().scale(0.6f, 0.6f);
-            for(int s = 0; s < pagesUnlocked; s++){
-                guiGraphics.item(new ItemStack(Items.MOJANG_BANNER_PATTERN), s * 12, 0);
-            }
-            guiGraphics.pose().popMatrix();
         } else {
             guiGraphics.text(this.font, Component.literal("✘").withStyle(ChatFormatting.RED), startX + textW + 2, bookY + 118, 0xFFFFFFFF, false);
         }
@@ -783,7 +724,7 @@ public class BestiaryScreen extends Screen {
         Component infoTitle = Component.translatable("gui.r3ct_bestiary.details.general_info").withStyle(ChatFormatting.BOLD, ChatFormatting.DARK_GRAY);
         guiGraphics.text(this.font, infoTitle, textX, currentY, 0xFFFFFFFF, false); currentY += 12;
 
-        if (pagesUnlocked >= 1) {
+        if (isFullyCollected && dummy != null) {
             String typeKey = "gui.r3ct_bestiary.family.default";
             var holder = type.builtInRegistryHolder();
             if (holder.is(net.minecraft.tags.EntityTypeTags.UNDEAD)) typeKey = "gui.r3ct_bestiary.family.undead";
@@ -807,7 +748,7 @@ public class BestiaryScreen extends Screen {
         Component bodyTitle = Component.translatable("gui.r3ct_bestiary.details.body_structure").withStyle(ChatFormatting.BOLD, ChatFormatting.DARK_GRAY);
         guiGraphics.text(this.font, bodyTitle, textX, currentY, 0xFFFFFFFF, false); currentY += 12;
 
-        if (pagesUnlocked >= 2 && dummy != null) {
+        if (isFullyCollected && dummy != null) {
             int hp = Math.round(dummy.getMaxHealth());
             int armor = dummy.getArmorValue();
             String size = String.format(java.util.Locale.US, "%.1fm x %.1fm", dummy.getBbWidth(), dummy.getBbHeight());
@@ -837,7 +778,7 @@ public class BestiaryScreen extends Screen {
         Component habitsTitle = Component.translatable("gui.r3ct_bestiary.details.habits_and_attack").withStyle(net.minecraft.ChatFormatting.BOLD, net.minecraft.ChatFormatting.DARK_GRAY);
         guiGraphics.text(this.font, habitsTitle, textX, currentY, 0xFFFFFFFF, false); currentY += 12;
 
-        if (pagesUnlocked >= 3 && dummy != null) {
+        if (isFullyCollected && dummy != null) {
             Component dmgVal = Component.translatable("gui.r3ct_bestiary.details.none");
 
             var dmgAttr = dummy.getAttribute(net.minecraft.world.entity.ai.attributes.Attributes.ATTACK_DAMAGE);
@@ -906,7 +847,7 @@ public class BestiaryScreen extends Screen {
         Component resistTitle = Component.translatable("gui.r3ct_bestiary.details.resistances").withStyle(ChatFormatting.BOLD, ChatFormatting.DARK_GRAY);
         guiGraphics.text(this.font, resistTitle, textX, currentY, 0xFFFFFFFF, false); currentY += 12;
 
-        if (pagesUnlocked >= 4 && dummy != null) {
+        if (isFullyCollected && dummy != null) {
             Component fireVal = dummy.fireImmune() ? Component.translatable("gui.r3ct_bestiary.details.yes").withStyle(ChatFormatting.DARK_GREEN) : Component.translatable("gui.r3ct_bestiary.details.no").withStyle(ChatFormatting.RED);
 
             String kbStr = "0%";

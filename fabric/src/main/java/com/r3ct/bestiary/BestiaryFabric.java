@@ -54,7 +54,11 @@ public class BestiaryFabric implements ModInitializer {
 
         ServerPlayConnectionEvents.JOIN.register((handler, sender, server) -> {
             com.r3ct.bestiary.data.PlayerData data = com.r3ct.bestiary.data.ModState.getPlayerData(server, handler.player.getUUID());
-            com.r3ct.bestiary.platform.Services.PLATFORM.sendSyncDataPacketToClient(handler.player, data.killCounts, data.rewardedCategories);
+
+            java.util.Map<String, java.util.List<String>> networkMap = new java.util.HashMap<>();
+            data.unlockedActions.forEach((id, set) -> networkMap.put(id, new java.util.ArrayList<>(set)));
+            com.r3ct.bestiary.platform.Services.PLATFORM.sendSyncDataPacketToClient(handler.player, networkMap, new java.util.ArrayList<>(data.rewardedCategories));
+
             var statsMap = com.r3ct.bestiary.scanner.ServerMobScanner.getServerMobStats(handler.player.level());
             ServerPlayNetworking.send(handler.player, new com.r3ct.bestiary.network.MobStatsSyncPayload(statsMap));
             String mobsJson = BestiaryConfig.getMobsConfigAsString();

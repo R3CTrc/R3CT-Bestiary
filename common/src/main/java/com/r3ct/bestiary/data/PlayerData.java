@@ -13,16 +13,14 @@ import java.util.Set;
 
 public class PlayerData {
     public String lastKnownName = "Unknown";
-    public Map<String, Integer> killCounts = new HashMap<>();
+
+    public Map<String, Set<String>> unlockedActions = new HashMap<>();
     public Set<String> rewardedCategories = new HashSet<>();
-    public Map<String, Double> rideDistances = new HashMap<>();
-
     public boolean receivedMigrationRefund = false;
-
     public static final Codec<PlayerData> CODEC = CompoundTag.CODEC.xmap(PlayerData::fromNbt, PlayerData::toNbt);
 
     public PlayerData() {
-        killCounts.clear();
+        unlockedActions.clear();
         rewardedCategories.clear();
     }
 
@@ -32,9 +30,15 @@ public class PlayerData {
         nbt.putString("lastKnownName", lastKnownName);
         nbt.putBoolean("receivedMigrationRefund", receivedMigrationRefund);
 
-        CompoundTag killsNbt = new CompoundTag();
-        killCounts.forEach(killsNbt::putInt);
-        nbt.put("killCounts", killsNbt);
+        CompoundTag actionsNbt = new CompoundTag();
+        unlockedActions.forEach((entityId, actions) -> {
+            ListTag list = new ListTag();
+            for (String action : actions) {
+                list.add(StringTag.valueOf(action));
+            }
+            actionsNbt.put(entityId, list);
+        });
+        nbt.put("unlockedActions", actionsNbt);
 
         ListTag categoriesList = new ListTag();
         for (String cat : rewardedCategories) categoriesList.add(StringTag.valueOf(cat != null ? cat : ""));
@@ -54,10 +58,17 @@ public class PlayerData {
             data.receivedMigrationRefund = nbt.getBoolean("receivedMigrationRefund").orElse(false);
         }
 
-        if (nbt.contains("killCounts")) {
-            CompoundTag killsNbt = nbt.getCompound("killCounts").orElse(new CompoundTag());
-            for (String key : killsNbt.keySet()) {
-                killsNbt.getInt(key).ifPresent(count -> data.killCounts.put(key, count));
+        if (nbt.contains("unlockedActions")) {
+            CompoundTag actionsNbt = nbt.getCompound("unlockedActions").orElse(new CompoundTag());
+            for (String key : actionsNbt.keySet()) {
+                Tag tag = actionsNbt.get(key);
+                if (tag instanceof ListTag list) {
+                    Set<String> actions = new HashSet<>();
+                    for (int i = 0; i < list.size(); i++) {
+                        list.getString(i).ifPresent(actions::add);
+                    }
+                    data.unlockedActions.put(key, actions);
+                }
             }
         }
 

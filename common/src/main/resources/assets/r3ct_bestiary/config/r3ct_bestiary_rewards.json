@@ -13,10 +13,11 @@
   "_comment_INFO_8": " COLORS: You can use standard Minecraft color codes with the '&' symbol.",
   "_comment_INFO_9": "=========================================================================",
 
-  "_comment_xp": "Experience points rewarded when fully researching a mob: [Base (Checkmark), Star 1, Star 2, Star 3].",
-  "xpBosses": [100, 250, 250, 250],
-  "xpMonsters": [15, 30, 50, 75],
-  "xpCreatures": [10, 25, 50, 75],
+  "_comment_xp": "Experience points rewarded for unlocking individual actions and for full completion of a mob.",
+  "xpPerAction": 10,
+  "xpCompletionBoss": 1000,
+  "xpCompletionMonster": 100,
+  "xpCompletionCreature": 50,
 
   "_comment_interval": "How often (every X fully researched species) the player receives a milestone reward.",
   "milestoneInterval": 25,

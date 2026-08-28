@@ -1,11 +1,14 @@
 package com.r3ct.bestiary.platform.services;
 
 import net.minecraft.core.BlockPos;
+import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.entity.BlockEntityType;
 import net.minecraft.world.level.block.state.BlockState;
 
+import java.util.List;
+import java.util.Map;
 import java.util.function.BiFunction;
 
 public interface IPlatformHelper {
@@ -42,7 +45,7 @@ public interface IPlatformHelper {
         return isDevelopmentEnvironment() ? "development" : "production";
     }
 
-    void sendSyncDataPacketToClient(net.minecraft.server.level.ServerPlayer player, java.util.Map<String, Integer> killCounts, java.util.Set<String> rewardedCategories);
+    void sendSyncDataPacketToClient(ServerPlayer player, Map<String, List<String>> unlockedActions, List<String> rewardedCategories);
 
     void sendRequestLeaderboardPacketToServer();
 

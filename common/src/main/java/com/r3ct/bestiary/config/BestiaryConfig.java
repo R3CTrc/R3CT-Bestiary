@@ -21,20 +21,14 @@ public class BestiaryConfig {
     public static Map<String, String> modCategoryOverrides = new HashMap<>();
     public static Map<String, String> mobCategoryOverrides = new HashMap<>();
 
-    public static List<Integer> defaultProgressBosses = Arrays.asList(1, 3, 5, 10);
-    public static List<Integer> defaultProgressMonsters = Arrays.asList(1, 25, 50, 100);
-    public static List<Integer> defaultProgressCreatures = Arrays.asList(1, 25, 50, 100);
-
-    public static Map<String, List<Integer>> customProgressRequirements = new HashMap<>();
-
-    public static int interactionCooldownMinutes = 30;
-    public static int rideDistanceBlocks = 500;
+    public static Map<String, List<String>> customActionOverrides = new HashMap<>();
 
     public static float catalogScale = 1.0f;
 
-    public static List<Integer> xpBosses = Arrays.asList(500, 1500, 3000, 5000);
-    public static List<Integer> xpMonsters = Arrays.asList(100, 500, 1500, 3000);
-    public static List<Integer> xpCreatures = Arrays.asList(50, 250, 1000, 2000);
+    public static int xpPerAction = 10;
+    public static int xpCompletionBoss = 1000;
+    public static int xpCompletionMonster = 100;
+    public static int xpCompletionCreature = 50;
 
     public static int milestoneInterval = 10;
     public static List<LootEntry> milestoneRewards = new ArrayList<>();
@@ -110,13 +104,7 @@ public class BestiaryConfig {
                     mobCategoryOverrides.put("minecraft:elder_guardian", "bosses");
                 }
 
-                if (data.defaultProgressBosses != null && !data.defaultProgressBosses.isEmpty()) defaultProgressBosses = data.defaultProgressBosses;
-                if (data.defaultProgressMonsters != null && !data.defaultProgressMonsters.isEmpty()) defaultProgressMonsters = data.defaultProgressMonsters;
-                if (data.defaultProgressCreatures != null && !data.defaultProgressCreatures.isEmpty()) defaultProgressCreatures = data.defaultProgressCreatures;
-                if (data.customProgressRequirements != null) customProgressRequirements = data.customProgressRequirements;
-
-                interactionCooldownMinutes = data.interactionCooldownMinutes;
-                rideDistanceBlocks = data.rideDistanceBlocks;
+                if (data.customActionOverrides != null) customActionOverrides = data.customActionOverrides;
             }
         } catch (Exception e) { System.err.println("[R3CT-Bestiary] Error loading mobs config!"); }
 
@@ -130,9 +118,10 @@ public class BestiaryConfig {
         try (FileReader reader = new FileReader(REWARDS_PATH.toFile())) {
             RewardsData data = GSON.fromJson(reader, RewardsData.class);
             if (data != null) {
-                if (data.xpBosses != null && !data.xpBosses.isEmpty()) xpBosses = data.xpBosses;
-                if (data.xpMonsters != null && !data.xpMonsters.isEmpty()) xpMonsters = data.xpMonsters;
-                if (data.xpCreatures != null && !data.xpCreatures.isEmpty()) xpCreatures = data.xpCreatures;
+                xpPerAction = data.xpPerAction;
+                xpCompletionBoss = data.xpCompletionBoss;
+                xpCompletionMonster = data.xpCompletionMonster;
+                xpCompletionCreature = data.xpCompletionCreature;
                 milestoneInterval = data.milestoneInterval;
                 if (data.milestoneRewards != null) milestoneRewards = data.milestoneRewards;
             }
@@ -173,12 +162,7 @@ public class BestiaryConfig {
         Set<String> blacklistedMobs = BestiaryConfig.blacklistedMobs;
         Map<String, String> modCategoryOverrides = BestiaryConfig.modCategoryOverrides;
         Map<String, String> mobCategoryOverrides = BestiaryConfig.mobCategoryOverrides;
-        List<Integer> defaultProgressBosses = BestiaryConfig.defaultProgressBosses;
-        List<Integer> defaultProgressMonsters = BestiaryConfig.defaultProgressMonsters;
-        List<Integer> defaultProgressCreatures = BestiaryConfig.defaultProgressCreatures;
-        Map<String, List<Integer>> customProgressRequirements = BestiaryConfig.customProgressRequirements;
-        int interactionCooldownMinutes = BestiaryConfig.interactionCooldownMinutes;
-        int rideDistanceBlocks = BestiaryConfig.rideDistanceBlocks;
+        Map<String, List<String>> customActionOverrides = BestiaryConfig.customActionOverrides;
     }
 
     private static class ClientData {
@@ -188,9 +172,10 @@ public class BestiaryConfig {
 
     private static class RewardsData {
         int version = REWARDS_CONFIG_VERSION;
-        List<Integer> xpBosses = BestiaryConfig.xpBosses;
-        List<Integer> xpMonsters = BestiaryConfig.xpMonsters;
-        List<Integer> xpCreatures = BestiaryConfig.xpCreatures;
+        int xpPerAction = BestiaryConfig.xpPerAction;
+        int xpCompletionBoss = BestiaryConfig.xpCompletionBoss;
+        int xpCompletionMonster = BestiaryConfig.xpCompletionMonster;
+        int xpCompletionCreature = BestiaryConfig.xpCompletionCreature;
         int milestoneInterval = BestiaryConfig.milestoneInterval;
         List<LootEntry> milestoneRewards = BestiaryConfig.milestoneRewards;
     }
@@ -244,19 +229,15 @@ public class BestiaryConfig {
                 if (mobsData.blacklistedMobs != null) blacklistedMobs = mobsData.blacklistedMobs;
                 if (mobsData.modCategoryOverrides != null) modCategoryOverrides = mobsData.modCategoryOverrides;
                 if (mobsData.mobCategoryOverrides != null) mobCategoryOverrides = mobsData.mobCategoryOverrides;
-                if (mobsData.defaultProgressBosses != null && !mobsData.defaultProgressBosses.isEmpty()) defaultProgressBosses = mobsData.defaultProgressBosses;
-                if (mobsData.defaultProgressMonsters != null && !mobsData.defaultProgressMonsters.isEmpty()) defaultProgressMonsters = mobsData.defaultProgressMonsters;
-                if (mobsData.defaultProgressCreatures != null && !mobsData.defaultProgressCreatures.isEmpty()) defaultProgressCreatures = mobsData.defaultProgressCreatures;
-                if (mobsData.customProgressRequirements != null) customProgressRequirements = mobsData.customProgressRequirements;
-                interactionCooldownMinutes = mobsData.interactionCooldownMinutes;
-                rideDistanceBlocks = mobsData.rideDistanceBlocks;
+                if (mobsData.customActionOverrides != null) customActionOverrides = mobsData.customActionOverrides;
             }
 
             RewardsData rewardsData = GSON.fromJson(rewardsJson, RewardsData.class);
             if (rewardsData != null) {
-                if (rewardsData.xpBosses != null && !rewardsData.xpBosses.isEmpty()) xpBosses = rewardsData.xpBosses;
-                if (rewardsData.xpMonsters != null && !rewardsData.xpMonsters.isEmpty()) xpMonsters = rewardsData.xpMonsters;
-                if (rewardsData.xpCreatures != null && !rewardsData.xpCreatures.isEmpty()) xpCreatures = rewardsData.xpCreatures;
+                xpPerAction = rewardsData.xpPerAction;
+                xpCompletionBoss = rewardsData.xpCompletionBoss;
+                xpCompletionMonster = rewardsData.xpCompletionMonster;
+                xpCompletionCreature = rewardsData.xpCompletionCreature;
                 milestoneInterval = rewardsData.milestoneInterval;
                 if (rewardsData.milestoneRewards != null) milestoneRewards = rewardsData.milestoneRewards;
             }

@@ -36,9 +36,7 @@
   "gui.r3ct_bestiary.catalog.action.kill": "Required: Kill",
   "gui.r3ct_bestiary.catalog.click_to_open": "(Click to open journal)",
   "gui.r3ct_bestiary.catalog.dev_complete": "Complete Category (DEV)",
-  "gui.r3ct_bestiary.catalog.page_prefix": "Page %s: ",
 
-  "gui.r3ct_bestiary.details.pages_label": "Pages: ",
   "gui.r3ct_bestiary.details.general_info": "1. General Information",
   "gui.r3ct_bestiary.details.body_structure": "2. Body Structure",
   "gui.r3ct_bestiary.details.habits_and_attack": "3. Habits & Attack",
@@ -78,7 +76,7 @@
   "gui.r3ct_bestiary.info.point2": "2. Milestones & Rewards",
 
   "chat.r3ct_bestiary.prefix": "[Bestiary] ",
-  "chat.r3ct_bestiary.mob_completed": "Discovered basic info (Page 1) for: %s",
+  "chat.r3ct_bestiary.mob_completed": "100%% Researched: %s",
   "chat.r3ct_bestiary.page_unlocked": "Unlocked a new page (%s) for: %s",
   "chat.r3ct_bestiary.milestone_reward": "Reached milestone #%s! You received: %s",
   "chat.r3ct_bestiary.category_complete": "Congratulations! Category %s complete! Received: %s",
@@ -88,6 +86,20 @@
   "mobcategory.bosses": "Bosses",
   "mobcategory.monsters": "Monsters",
   "mobcategory.creatures": "Creatures",
+
+  "action.r3ct_bestiary.kill": "Slay",
+  "action.r3ct_bestiary.interact": "Investigate",
+  "action.r3ct_bestiary.breed": "Breed",
+  "action.r3ct_bestiary.tame": "Tame",
+  "action.r3ct_bestiary.shear": "Shear",
+  "action.r3ct_bestiary.bucket": "Catch in Bucket",
+  "action.r3ct_bestiary.trade": "Trade",
+  "action.r3ct_bestiary.ride": "Ride",
+  "action.r3ct_bestiary.summon": "Summon",
+
+  "gui.r3ct_bestiary.details.tasks_label": "Tasks: ",
+
+  "chat.r3ct_bestiary.action_unlocked": "Behavior unlocked: %1$s (%2$s)",
 
   "advancement.r3ct_bestiary.root.title": "R3CT Bestiary",
   "advancement.r3ct_bestiary.root.desc": "Open your Bestiary and start the hunt.",

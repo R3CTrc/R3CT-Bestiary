@@ -36,9 +36,7 @@
   "gui.r3ct_bestiary.catalog.action.kill": "Wymagane: Zabójstwo",
   "gui.r3ct_bestiary.catalog.click_to_open": "(Kliknij, aby otworzyć dziennik)",
   "gui.r3ct_bestiary.catalog.dev_complete": "Zalicz kategorię (DEV)",
-  "gui.r3ct_bestiary.catalog.page_prefix": "Strona %s: ",
 
-  "gui.r3ct_bestiary.details.pages_label": "Strony: ",
   "gui.r3ct_bestiary.details.general_info": "1. Informacje ogólne",
   "gui.r3ct_bestiary.details.body_structure": "2. Budowa ciała",
   "gui.r3ct_bestiary.details.habits_and_attack": "3. Nawyki i atak",
@@ -78,7 +76,7 @@
   "gui.r3ct_bestiary.info.point2": "2. Kamienie Milowe",
 
   "chat.r3ct_bestiary.prefix": "[Bestiary] ",
-  "chat.r3ct_bestiary.mob_completed": "Zbadano podstawowe informacje (Strona 1) o: %s",
+  "chat.r3ct_bestiary.mob_completed": "Zbadano w 100%%: %s",
   "chat.r3ct_bestiary.page_unlocked": "Odblokowano nową stronę (%s) dla: %s",
   "chat.r3ct_bestiary.milestone_reward": "Osiągnięto kamień milowy #%s! Otrzymujesz: %s",
   "chat.r3ct_bestiary.category_complete": "Gratulacje! Kategoria %s ukończona! Otrzymujesz: %s",
@@ -88,6 +86,20 @@
   "mobcategory.bosses": "Bossy",
   "mobcategory.monsters": "Potwory",
   "mobcategory.creatures": "Stworzenia",
+
+  "action.r3ct_bestiary.kill": "Zabójstwo",
+  "action.r3ct_bestiary.interact": "Badanie",
+  "action.r3ct_bestiary.breed": "Rozmnożenie",
+  "action.r3ct_bestiary.tame": "Oswojenie",
+  "action.r3ct_bestiary.shear": "Ostrzyżenie",
+  "action.r3ct_bestiary.bucket": "Złapanie w Wiadro",
+  "action.r3ct_bestiary.trade": "Handel",
+  "action.r3ct_bestiary.ride": "Jazda",
+  "action.r3ct_bestiary.summon": "Przywołanie",
+
+  "gui.r3ct_bestiary.details.tasks_label": "Zadania: ",
+
+  "chat.r3ct_bestiary.action_unlocked": "Odkryto zachowanie: %1$s (%2$s)",
 
   "advancement.r3ct_bestiary.root.title": "Bestiariusz R3CT",
   "advancement.r3ct_bestiary.root.desc": "Otwórz Bestiariusz i rozpocznij wielkie łowy.",
