@@ -19,7 +19,6 @@ import org.jspecify.annotations.NonNull;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Set;
 
 public class BestiaryScreen extends Screen {
 
@@ -36,8 +35,6 @@ public class BestiaryScreen extends Screen {
     private int selectedTabIndex = 0;
     private int currentRowScroll = 0;
     private int homeScroll = 0;
-    private int detailsScroll = 0;
-    private int maxDetailsScroll = 0;
 
     private float[] tabProgressArray = new float[0];
     private long lastUpdateTime = 0L;
@@ -619,7 +616,6 @@ public class BestiaryScreen extends Screen {
 
         int centerX = bookX + (RENDER_SIZE / 2);
 
-        // 1. RYSOWANIE MOBA
         int boxX0 = centerX - 60;
         int boxY0 = bookY + 20;
         int boxX1 = centerX + 60;
@@ -648,14 +644,11 @@ public class BestiaryScreen extends Screen {
             guiGraphics.pose().popMatrix();
         }
 
-        // 2. NAZWA MOBA
         Component title = type.getDescription();
         guiGraphics.text(this.font, title, centerX - (this.font.width(title) / 2), bookY + 105, 0xFF000000, false);
 
-        // 3. ILOŚĆ SERDUSZEK
         String heartsText = "???";
         if (isFullyCollected && ClientPlayerData.serverMobStats.containsKey(selectedEntityId)) {
-            // Zamieniamy Max Health (np. 20) na serduszka (np. 10)
             int hearts = (int) Math.ceil(ClientPlayerData.serverMobStats.get(selectedEntityId).maxHealth() / 2.0);
             heartsText = String.valueOf(hearts);
         }
@@ -665,15 +658,21 @@ public class BestiaryScreen extends Screen {
 
         guiGraphics.text(this.font, hpComp, centerX - (this.font.width(hpComp) / 2), bookY + 117, 0xFFFFFFFF, false);
 
-        // 4. SIATKA PRZEDMIOTÓW (3 rzędy x 6 kolumn)
         int cellW = 25;
         int cellH = 25;
         int columns = 6;
         int gridStartX = centerX - ((columns * cellW) / 2);
         int gridStartY = bookY + 133;
 
-        List<ItemStack> drops = getPlaceholderDropsForMob(selectedEntityId); // Tymczasowa lista dropów
-        if (!isFullyCollected) drops.clear(); // Ukrywamy drop, jeśli mob nieodkryty
+        List<ItemStack> drops = new ArrayList<>();
+        if (isFullyCollected && ClientPlayerData.serverMobStats.containsKey(selectedEntityId)) {
+            for (String itemId : ClientPlayerData.serverMobStats.get(selectedEntityId).drops()) {
+                net.minecraft.world.item.Item item = net.minecraft.core.registries.BuiltInRegistries.ITEM.get(Identifier.parse(itemId)).map(net.minecraft.core.Holder::value).orElse(net.minecraft.world.item.Items.AIR);
+                if (item != net.minecraft.world.item.Items.AIR) {
+                    drops.add(new ItemStack(item));
+                }
+            }
+        }
 
         for (int i = 0; i < 18; i++) {
             int slotX = gridStartX + ((i % columns) * cellW);
@@ -681,7 +680,6 @@ public class BestiaryScreen extends Screen {
             int bgX = slotX + 3;
             int bgY = slotY + 3;
 
-            // Tło slota (ten sam styl co przy ikonach mobów)
             guiGraphics.fill(bgX, bgY, bgX + 18, bgY + 18, 0x1A3F220B);
             guiGraphics.fill(bgX, bgY, bgX + 18, bgY + 1, 0x2A3F220B);
             guiGraphics.fill(bgX, bgY, bgX + 1, bgY + 18, 0x2A3F220B);
@@ -696,10 +694,9 @@ public class BestiaryScreen extends Screen {
             }
         }
 
-        // 5. DODATKOWE 3 SLOTY NA DOLE
         int bottomColumns = 3;
         int bottomStartX = centerX - ((bottomColumns * cellW) / 2);
-        int bottomStartY = gridStartY + (3 * cellH) + 5; // Lekki odstęp od głównego ekwipunku
+        int bottomStartY = gridStartY + (3 * cellH) + 5;
 
         for (int i = 0; i < bottomColumns; i++) {
             int slotX = bottomStartX + (i * cellW);
@@ -710,33 +707,7 @@ public class BestiaryScreen extends Screen {
             guiGraphics.fill(bgX, bgY, bgX + 18, bgY + 18, 0x1A3F220B);
             guiGraphics.fill(bgX, bgY, bgX + 18, bgY + 1, 0x2A3F220B);
             guiGraphics.fill(bgX, bgY, bgX + 1, bgY + 18, 0x2A3F220B);
-
-            // To miejsce czeka na Twoje polecenia! :)
         }
-
-        // Zabezpieczenie przed błędem ze starym systemem przewijania
-        maxDetailsScroll = 0;
-    }
-
-    private List<ItemStack> getPlaceholderDropsForMob(String entityId) {
-        List<ItemStack> list = new ArrayList<>();
-        if (entityId.equals("minecraft:zombie")) {
-            list.add(new ItemStack(Items.ROTTEN_FLESH));
-            list.add(new ItemStack(Items.IRON_INGOT));
-            list.add(new ItemStack(Items.CARROT));
-            list.add(new ItemStack(Items.POTATO));
-        } else if (entityId.equals("minecraft:skeleton")) {
-            list.add(new ItemStack(Items.BONE));
-            list.add(new ItemStack(Items.ARROW));
-            list.add(new ItemStack(Items.BOW));
-        } else if (entityId.equals("minecraft:cow")) {
-            list.add(new ItemStack(Items.BEEF));
-            list.add(new ItemStack(Items.LEATHER));
-        } else {
-            // Domyślnie ładujemy np. 4 randomowe przedmioty tylko po to, by sprawdzić jak układa się GUI
-            list.add(new ItemStack(Items.BONE));
-        }
-        return list;
     }
 
     private void updateScrollbar(double mouseY) {
@@ -865,13 +836,6 @@ public class BestiaryScreen extends Screen {
                     this.minecraft.getSoundManager().play(net.minecraft.client.resources.sounds.SimpleSoundInstance.forUI(net.minecraft.sounds.SoundEvents.UI_BUTTON_CLICK, 1.0F));
                     return true;
                 }
-            }
-        } else if (activeSpecialTab == SpecialTab.DETAILS) {
-            int trackX = bookStartX + 199;
-            if (mouseX >= trackX - 2 && mouseX <= trackX + 6 && mouseY >= bookStartY + 135 && mouseY <= bookStartY + 135 + 80) {
-                isScrolling = true;
-                updateScrollbar(mouseY);
-                return true;
             }
         }
 

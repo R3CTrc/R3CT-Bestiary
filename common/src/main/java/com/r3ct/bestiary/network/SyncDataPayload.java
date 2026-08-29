@@ -14,7 +14,6 @@ public record SyncDataPayload(Set<String> unlockedMobs, List<String> rewardedCat
     public static final Type<SyncDataPayload> TYPE = new Type<>(Identifier.parse("r3ct_bestiary:sync_data"));
 
     public static final StreamCodec<RegistryFriendlyByteBuf, SyncDataPayload> CODEC = StreamCodec.composite(
-            // W locie zamieniamy przesyłane dane na lekkiego HashSet'a
             ByteBufCodecs.collection(HashSet::new, ByteBufCodecs.STRING_UTF8), SyncDataPayload::unlockedMobs,
             ByteBufCodecs.STRING_UTF8.apply(ByteBufCodecs.list()), SyncDataPayload::rewardedCategories,
             SyncDataPayload::new

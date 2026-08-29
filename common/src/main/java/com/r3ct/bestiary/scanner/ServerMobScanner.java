@@ -33,13 +33,18 @@ public class ServerMobScanner {
                 Entity entity = type.create(level, EntitySpawnReason.COMMAND);
                 if (entity instanceof LivingEntity living) {
 
+                    Identifier lootTableId = null;
+
                     if (living instanceof Mob mob) {
                         mob.finalizeSpawn(level, level.getCurrentDifficultyAt(mob.blockPosition()), EntitySpawnReason.COMMAND, null);
+                        lootTableId = mob.getLootTable().get().identifier();
+                    } else {
+                        lootTableId = type.getDefaultLootTable().get().identifier();
                     }
 
-                    // Zbieramy TYLKO to, co nas teraz interesuje
                     float hp = living.getMaxHealth();
-                    List<String> drops = scanLootTablesForDrops(level, type);
+
+                    List<String> drops = scanLootTable(level, lootTableId, new HashSet<>(), new HashSet<>());
 
                     CACHED_STATS.put(BuiltInRegistries.ENTITY_TYPE.getKey(type).toString(),
                             new MobBaseStats(hp, living.getMainHandItem().copy(), drops));
@@ -51,39 +56,53 @@ public class ServerMobScanner {
         return CACHED_STATS;
     }
 
-    // NASZ NOWY, SZYBKI SKANER JSON
-    private static List<String> scanLootTablesForDrops(ServerLevel level, EntityType<?> type) {
-        Set<String> drops = new HashSet<>();
-        try {
-            Identifier location = type.getDefaultLootTable().get().identifier();
-            Identifier resourcePath = Identifier.parse(location.getNamespace() + ":loot_table/" + location.getPath() + ".json");
+    private static List<String> scanLootTable(ServerLevel level, Identifier location, Set<String> items, Set<Identifier> visited) {
+        if (location == null || !visited.add(location)) return new ArrayList<>(items);
 
+        try {
+            Identifier resourcePath = Identifier.parse(location.getNamespace() + ":loot_table/" + location.getPath() + ".json");
             var resourceOpt = level.getServer().getResourceManager().getResource(resourcePath);
+
             if (resourceOpt.isPresent()) {
                 try (Reader reader = new InputStreamReader(resourceOpt.get().open())) {
                     JsonElement json = JsonParser.parseReader(reader);
-                    extractItemsFromJson(json, drops);
+                    extractItemsFromJson(json, items, level, visited);
                 }
             }
         } catch (Exception ignored) {}
 
-        return new ArrayList<>(drops);
+        return new ArrayList<>(items);
     }
 
-    private static void extractItemsFromJson(JsonElement element, Set<String> items) {
+    private static void extractItemsFromJson(JsonElement element, Set<String> items, ServerLevel level, Set<Identifier> visited) {
         if (element.isJsonObject()) {
             JsonObject obj = element.getAsJsonObject();
-            if (obj.has("type") && obj.get("type").getAsString().equals("minecraft:item")) {
-                if (obj.has("name")) {
-                    items.add(obj.get("name").getAsString());
+
+            if (obj.has("name")) {
+                String name = obj.get("name").getAsString();
+
+                if (obj.has("type") && obj.get("type").getAsString().equals("minecraft:loot_table")) {
+                    scanLootTable(level, Identifier.parse(name), items, visited);
+                } else {
+                    if (BuiltInRegistries.ITEM.containsKey(Identifier.parse(name)) && !name.equals("minecraft:air")) {
+                        items.add(name);
+                    }
                 }
             }
+
+            if (obj.has("item")) {
+                String item = obj.get("item").getAsString();
+                if (BuiltInRegistries.ITEM.containsKey(Identifier.parse(item)) && !item.equals("minecraft:air")) {
+                    items.add(item);
+                }
+            }
+
             for (Map.Entry<String, JsonElement> entry : obj.entrySet()) {
-                extractItemsFromJson(entry.getValue(), items);
+                extractItemsFromJson(entry.getValue(), items, level, visited);
             }
         } else if (element.isJsonArray()) {
             for (JsonElement el : element.getAsJsonArray()) {
-                extractItemsFromJson(el, items);
+                extractItemsFromJson(el, items, level, visited);
             }
         }
     }
