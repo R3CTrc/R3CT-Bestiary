@@ -22,10 +22,5 @@
     "minecraft:wither": "bosses",
     "minecraft:warden": "bosses",
     "minecraft:elder_guardian": "bosses"
-  },
-
-  "_comment_custom_actions": "Manually add required actions to specific mobs. Valid actions: kill, breed, tame, shear, bucket, trade, ride, interact",
-  "customActionOverrides": {
-    "minecraft:iron_golem": ["interact", "kill"]
   }
 }

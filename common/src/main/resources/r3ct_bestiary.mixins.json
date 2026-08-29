@@ -4,16 +4,9 @@
   "package": "com.r3ct.bestiary.mixin",
   "compatibilityLevel": "JAVA_18",
   "mixins": [
-    "AbstractHorseMixin",
-    "BredAnimalsMixin",
-    "BucketableMixin",
     "EntityInteractMixin",
     "GuiGraphicsMixin",
-    "LivingEntityMixin",
-    "PlayerRideMixin",
-    "ShearableMixin",
-    "TamableAnimalMixin",
-    "TradeMixin"
+    "LivingEntityMixin"
   ],
   "client": [
   ],

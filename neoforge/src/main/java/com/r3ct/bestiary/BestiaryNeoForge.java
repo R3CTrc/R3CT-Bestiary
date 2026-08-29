@@ -23,10 +23,7 @@ import net.neoforged.neoforge.registries.RegisterEvent;
 import com.r3ct.bestiary.block.ModBlocks;
 
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.HashSet;
-import java.util.List;
-import java.util.Map;
 
 @Mod(Constants.MOD_ID)
 public class BestiaryNeoForge {
@@ -45,10 +42,7 @@ public class BestiaryNeoForge {
         registrar.playToClient(
                 SyncDataPayload.TYPE, SyncDataPayload.CODEC,
                 (payload, context) -> context.enqueueWork(() -> {
-                    ClientPlayerData.unlockedActions.clear();
-                    payload.unlockedActions().forEach((id, list) -> {
-                        ClientPlayerData.unlockedActions.put(id, new HashSet<>(list));
-                    });
+                    ClientPlayerData.unlockedMobs = new HashSet<>(payload.unlockedMobs());
                     ClientPlayerData.rewardedCategories = new HashSet<>(payload.rewardedCategories());
                 })
         );
@@ -78,6 +72,7 @@ public class BestiaryNeoForge {
                     BestiaryConfig.syncFromServer(payload.mobsJson(), payload.rewardsJson());
                 })
         );
+
         registrar.playToServer(
                 com.r3ct.bestiary.network.SetTrophyEntityPayload.TYPE, com.r3ct.bestiary.network.SetTrophyEntityPayload.CODEC,
                 (payload, context) -> context.enqueueWork(() -> {
@@ -104,9 +99,7 @@ public class BestiaryNeoForge {
         if (event.getEntity() instanceof ServerPlayer serverPlayer) {
             com.r3ct.bestiary.data.PlayerData data = com.r3ct.bestiary.data.ModState.getPlayerData(serverPlayer.level().getServer(), serverPlayer.getUUID());
 
-            Map<String, List<String>> networkMap = new HashMap<>();
-            data.unlockedActions.forEach((id, set) -> networkMap.put(id, new ArrayList<>(set)));
-            com.r3ct.bestiary.platform.Services.PLATFORM.sendSyncDataPacketToClient(serverPlayer, networkMap, new ArrayList<>(data.rewardedCategories));
+            com.r3ct.bestiary.platform.Services.PLATFORM.sendSyncDataPacketToClient(serverPlayer, new HashSet<>(data.unlockedMobs), new ArrayList<>(data.rewardedCategories));
 
             var statsMap = com.r3ct.bestiary.scanner.ServerMobScanner.getServerMobStats(serverPlayer.level());
             net.neoforged.neoforge.network.PacketDistributor.sendToPlayer(serverPlayer, new com.r3ct.bestiary.network.MobStatsSyncPayload(statsMap));

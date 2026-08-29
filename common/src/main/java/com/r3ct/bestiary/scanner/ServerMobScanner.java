@@ -1,17 +1,21 @@
 package com.r3ct.bestiary.scanner;
 
+import com.google.gson.JsonElement;
+import com.google.gson.JsonObject;
+import com.google.gson.JsonParser;
 import com.r3ct.bestiary.network.MobBaseStats;
 import net.minecraft.core.registries.BuiltInRegistries;
+import net.minecraft.resources.Identifier;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.EntitySpawnReason;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.Mob;
-import net.minecraft.world.entity.ai.attributes.Attributes;
 
-import java.util.HashMap;
-import java.util.Map;
+import java.io.InputStreamReader;
+import java.io.Reader;
+import java.util.*;
 
 public class ServerMobScanner {
 
@@ -33,29 +37,54 @@ public class ServerMobScanner {
                         mob.finalizeSpawn(level, level.getCurrentDifficultyAt(mob.blockPosition()), EntitySpawnReason.COMMAND, null);
                     }
 
+                    // Zbieramy TYLKO to, co nas teraz interesuje
                     float hp = living.getMaxHealth();
-                    int armor = living.getArmorValue();
-                    double speed = living.getAttributeValue(Attributes.MOVEMENT_SPEED);
-
-                    double attack = 0;
-                    var attackAttr = living.getAttribute(Attributes.ATTACK_DAMAGE);
-                    if (attackAttr != null) attack = attackAttr.getValue();
-
-                    double range = 16;
-                    var rangeAttr = living.getAttribute(Attributes.FOLLOW_RANGE);
-                    if (rangeAttr != null) range = rangeAttr.getValue();
-
-                    float kb = 0;
-                    var kbAttr = living.getAttribute(Attributes.KNOCKBACK_RESISTANCE);
-                    if (kbAttr != null) kb = (float) kbAttr.getValue();
+                    List<String> drops = scanLootTablesForDrops(level, type);
 
                     CACHED_STATS.put(BuiltInRegistries.ENTITY_TYPE.getKey(type).toString(),
-                            new MobBaseStats(hp, armor, speed, attack, range, kb, living.fireImmune(), living.getMainHandItem().copy()));
+                            new MobBaseStats(hp, living.getMainHandItem().copy(), drops));
 
                     living.discard();
                 }
             } catch (Exception ignored) {}
         }
         return CACHED_STATS;
+    }
+
+    // NASZ NOWY, SZYBKI SKANER JSON
+    private static List<String> scanLootTablesForDrops(ServerLevel level, EntityType<?> type) {
+        Set<String> drops = new HashSet<>();
+        try {
+            Identifier location = type.getDefaultLootTable().get().identifier();
+            Identifier resourcePath = Identifier.parse(location.getNamespace() + ":loot_table/" + location.getPath() + ".json");
+
+            var resourceOpt = level.getServer().getResourceManager().getResource(resourcePath);
+            if (resourceOpt.isPresent()) {
+                try (Reader reader = new InputStreamReader(resourceOpt.get().open())) {
+                    JsonElement json = JsonParser.parseReader(reader);
+                    extractItemsFromJson(json, drops);
+                }
+            }
+        } catch (Exception ignored) {}
+
+        return new ArrayList<>(drops);
+    }
+
+    private static void extractItemsFromJson(JsonElement element, Set<String> items) {
+        if (element.isJsonObject()) {
+            JsonObject obj = element.getAsJsonObject();
+            if (obj.has("type") && obj.get("type").getAsString().equals("minecraft:item")) {
+                if (obj.has("name")) {
+                    items.add(obj.get("name").getAsString());
+                }
+            }
+            for (Map.Entry<String, JsonElement> entry : obj.entrySet()) {
+                extractItemsFromJson(entry.getValue(), items);
+            }
+        } else if (element.isJsonArray()) {
+            for (JsonElement el : element.getAsJsonArray()) {
+                extractItemsFromJson(el, items);
+            }
+        }
     }
 }

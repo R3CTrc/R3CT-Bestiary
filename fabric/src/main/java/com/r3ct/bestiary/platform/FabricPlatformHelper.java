@@ -21,10 +21,10 @@ public class FabricPlatformHelper implements IPlatformHelper {
     }
 
     @Override
-    public void sendSyncDataPacketToClient(net.minecraft.server.level.ServerPlayer player, java.util.Map<String, java.util.List<String>> unlockedActions, java.util.List<String> rewardedCategories) {
+    public void sendSyncDataPacketToClient(net.minecraft.server.level.ServerPlayer player, java.util.Set<String> unlockedMobs, java.util.List<String> rewardedCategories) {
         net.fabricmc.fabric.api.networking.v1.ServerPlayNetworking.send(
                 player,
-                new com.r3ct.bestiary.network.SyncDataPayload(unlockedActions, rewardedCategories)
+                new com.r3ct.bestiary.network.SyncDataPayload(unlockedMobs, rewardedCategories)
         );
     }
 

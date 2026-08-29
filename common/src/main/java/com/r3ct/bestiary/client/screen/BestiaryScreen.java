@@ -84,14 +84,7 @@ public class BestiaryScreen extends Screen {
     }
 
     private boolean isCompleted(String entityId) {
-        net.minecraft.world.entity.LivingEntity dummy = getOrCreateDummy(entityId);
-        if (dummy == null) return false;
-
-        List<String> required = MobProgressHandler.getRequiredActions(dummy);
-        if (required.isEmpty()) return true;
-
-        Set<String> unlocked = ClientPlayerData.unlockedActions.getOrDefault(entityId, new java.util.HashSet<>());
-        return unlocked.containsAll(required);
+        return ClientPlayerData.unlockedMobs.contains(entityId);
     }
 
     private int getGatheredCount(EntityTypeScanner.CategoryData cat) {
@@ -152,8 +145,6 @@ public class BestiaryScreen extends Screen {
                         living.setItemSlot(net.minecraft.world.entity.EquipmentSlot.MAINHAND, serverStats.mainHandItem());
                         var hpAttr = living.getAttribute(net.minecraft.world.entity.ai.attributes.Attributes.MAX_HEALTH);
                         if (hpAttr != null) hpAttr.setBaseValue(serverStats.maxHealth());
-                        var dmgAttr = living.getAttribute(net.minecraft.world.entity.ai.attributes.Attributes.ATTACK_DAMAGE);
-                        if (dmgAttr != null) dmgAttr.setBaseValue(serverStats.attackDamage());
                     }
 
                     dummyCache.put(entityId, living);
@@ -502,10 +493,10 @@ public class BestiaryScreen extends Screen {
         EntityTypeScanner.CategoryData activeCat = cachedCategories.get(selectedTabIndex);
         List<String> items = activeCat.entityIds;
 
-        int columns = 5;
-        int visibleRows = 5;
-        int cellW = 30;
-        int cellH = 34;
+        int columns = 6;
+        int visibleRows = 7;
+        int cellW = 25;
+        int cellH = 25;
         int centerX = bookX + (RENDER_SIZE / 2) - 7;
 
         int totalItems = items.size();
@@ -569,23 +560,14 @@ public class BestiaryScreen extends Screen {
             int slotX = gridStartX + (index % columns * cellW);
             int slotY = gridStartY + (index / columns * cellH);
 
-            int bgX = slotX + 6;
-            int bgY = slotY;
+            int bgX = slotX + 3;
+            int bgY = slotY + 3;
 
             String entityId = items.get(i);
             EntityType<?> type = net.minecraft.core.registries.BuiltInRegistries.ENTITY_TYPE.get(Identifier.parse(entityId)).map(net.minecraft.core.Holder::value).orElse(null);
             ItemStack stack = getSpawnEggForEntity(entityId);
 
-            net.minecraft.world.entity.LivingEntity dummy = getOrCreateDummy(entityId);
-            List<String> required = dummy != null ? MobProgressHandler.getRequiredActions(dummy) : java.util.Collections.emptyList();
-            Set<String> unlocked = ClientPlayerData.unlockedActions.getOrDefault(entityId, new java.util.HashSet<>());
-
-            int unlockedCount = 0;
-            for (String req : required) {
-                if (unlocked.contains(req)) unlockedCount++;
-            }
-
-            boolean isFullyCollected = !required.isEmpty() && unlockedCount == required.size();
+            boolean isFullyCollected = ClientPlayerData.unlockedMobs.contains(entityId);
 
             guiGraphics.fill(bgX, bgY, bgX + 18, bgY + 18, 0x1A3F220B);
             guiGraphics.fill(bgX, bgY, bgX + 18, bgY + 1, 0x2A3F220B);
@@ -597,7 +579,6 @@ public class BestiaryScreen extends Screen {
 
             if (isFullyCollected) {
                 guiGraphics.fill(itemX, itemY, itemX + 16, itemY + 16, 0x66000000);
-
                 Component gridIcon = Component.literal("✔");
                 int iconW = this.font.width(gridIcon);
                 guiGraphics.text(this.font, gridIcon, itemX + 8 - (iconW / 2), itemY + 4, 0xFF55FF55, true);
@@ -606,21 +587,18 @@ public class BestiaryScreen extends Screen {
             if (scaledMouseX >= slotX && scaledMouseX < slotX + cellW && scaledMouseY >= slotY && scaledMouseY < slotY + cellH) {
                 List<Component> itemTooltip = new ArrayList<>();
                 Component originalName = type != null ? type.getDescription() : Component.literal(entityId);
-
                 Component iconTxt = isFullyCollected ? Component.literal(" ✔").withStyle(ChatFormatting.GREEN) : Component.empty();
                 Component modifiedName = originalName.copy().withStyle(isFullyCollected ? ChatFormatting.GREEN : ChatFormatting.GOLD).append(iconTxt);
                 itemTooltip.add(modifiedName);
                 itemTooltip.add(Component.literal(" "));
 
-                for (String req : required) {
-                    boolean done = unlocked.contains(req);
-                    String checkIcon = done ? "✔" : "✘";
-                    ChatFormatting color = done ? ChatFormatting.GREEN : ChatFormatting.RED;
+                String requiredAction = MobProgressHandler.getRequiredAction(entityId, type);
+                String checkIcon = isFullyCollected ? "✔" : "✘";
+                ChatFormatting color = isFullyCollected ? ChatFormatting.GREEN : ChatFormatting.RED;
 
-                    Component actionLine = Component.literal("[" + checkIcon + "] ").withStyle(color)
-                            .append(Component.translatable("action.r3ct_bestiary." + req).withStyle(ChatFormatting.GRAY));
-                    itemTooltip.add(actionLine);
-                }
+                Component actionLine = Component.literal("[" + checkIcon + "] ").withStyle(color)
+                        .append(Component.translatable("action.r3ct_bestiary." + requiredAction).withStyle(ChatFormatting.GRAY));
+                itemTooltip.add(actionLine);
 
                 itemTooltip.add(Component.literal(" "));
                 itemTooltip.add(Component.translatable("gui.r3ct_bestiary.catalog.click_to_open").withStyle(ChatFormatting.DARK_GRAY));
@@ -637,19 +615,11 @@ public class BestiaryScreen extends Screen {
         if (type == null) return;
 
         net.minecraft.world.entity.LivingEntity dummy = getOrCreateDummy(selectedEntityId);
-        List<String> required = dummy != null ? MobProgressHandler.getRequiredActions(dummy) : java.util.Collections.emptyList();
-        Set<String> unlocked = ClientPlayerData.unlockedActions.getOrDefault(selectedEntityId, new java.util.HashSet<>());
-
-        int unlockedCount = 0;
-        for (String req : required) {
-            if (unlocked.contains(req)) unlockedCount++;
-        }
-
-        int maxTasks = required.size();
-        boolean isFullyCollected = maxTasks > 0 && unlockedCount == maxTasks;
+        boolean isFullyCollected = ClientPlayerData.unlockedMobs.contains(selectedEntityId);
 
         int centerX = bookX + (RENDER_SIZE / 2);
 
+        // 1. RYSOWANIE MOBA
         int boxX0 = centerX - 60;
         int boxY0 = bookY + 20;
         int boxX1 = centerX + 60;
@@ -661,10 +631,8 @@ public class BestiaryScreen extends Screen {
             if (this.minecraft != null && this.minecraft.level != null) {
                 dummy.tickCount = (int) (this.minecraft.level.getGameTime() % 10000);
             }
-
             float maxDim = Math.max(dummy.getBbWidth(), dummy.getBbHeight());
             if (maxDim <= 0.01F) maxDim = 1.0F;
-
             int scale = (int) (45.0F * (float) Math.pow(maxDim, 0.4) / maxDim);
 
             net.minecraft.client.gui.screens.inventory.InventoryScreen.extractEntityInInventoryFollowsMouse(
@@ -680,199 +648,95 @@ public class BestiaryScreen extends Screen {
             guiGraphics.pose().popMatrix();
         }
 
+        // 2. NAZWA MOBA
         Component title = type.getDescription();
         guiGraphics.text(this.font, title, centerX - (this.font.width(title) / 2), bookY + 105, 0xFF000000, false);
 
-        int progressColor = isFullyCollected ? 0xFF55FF55 : (unlockedCount > 0 ? 0xFFFFAA00 : 0xFFFF5555);
-        Component progressText = Component.translatable("gui.r3ct_bestiary.details.tasks_label").withStyle(ChatFormatting.DARK_GRAY)
-                .append(Component.literal(unlockedCount + " / " + maxTasks).withStyle(net.minecraft.network.chat.Style.EMPTY.withColor(progressColor)));
-
-        int textW = this.font.width(progressText);
-        int iconW = 10;
-        int totalW = textW + iconW + 2;
-        int startX = centerX - (totalW / 2);
-
-        guiGraphics.text(this.font, progressText, startX, bookY + 118, 0xFFFFFFFF, false);
-
-        if (isFullyCollected) {
-            guiGraphics.text(this.font, Component.literal("✔").withStyle(ChatFormatting.GREEN), startX + textW + 2, bookY + 118, 0xFFFFFFFF, false);
-        } else {
-            guiGraphics.text(this.font, Component.literal("✘").withStyle(ChatFormatting.RED), startX + textW + 2, bookY + 118, 0xFFFFFFFF, false);
+        // 3. ILOŚĆ SERDUSZEK
+        String heartsText = "???";
+        if (isFullyCollected && ClientPlayerData.serverMobStats.containsKey(selectedEntityId)) {
+            // Zamieniamy Max Health (np. 20) na serduszka (np. 10)
+            int hearts = (int) Math.ceil(ClientPlayerData.serverMobStats.get(selectedEntityId).maxHealth() / 2.0);
+            heartsText = String.valueOf(hearts);
         }
 
-        int textX = bookX + 50;
-        int listStartY = bookY + 135;
-        int listHeight = 80;
+        Component hpComp = Component.literal(heartsText + " ").withStyle(ChatFormatting.DARK_GRAY)
+                .append(Component.literal("❤").withStyle(ChatFormatting.RED));
 
-        if (maxDetailsScroll > 0) {
-            int trackX = bookX + 199;
-            int trackY = listStartY;
-            guiGraphics.fill(trackX, trackY, trackX + 4, trackY + listHeight, 0xFF1A0A04);
-            float scrollFraction = (float) detailsScroll / maxDetailsScroll;
-            int thumbH = Math.max(12, (int) (((float) listHeight / (listHeight + maxDetailsScroll)) * listHeight));
-            int thumbY = trackY + (int) (scrollFraction * (listHeight - thumbH));
-            guiGraphics.fill(trackX, thumbY, trackX + 4, thumbY + thumbH, isScrolling ? 0xFFA07A5A : 0xFF8A5A3A);
-        }
+        guiGraphics.text(this.font, hpComp, centerX - (this.font.width(hpComp) / 2), bookY + 117, 0xFFFFFFFF, false);
 
-        guiGraphics.enableScissor(bookX + 40, listStartY, bookX + 195, listStartY + listHeight);
+        // 4. SIATKA PRZEDMIOTÓW (3 rzędy x 6 kolumn)
+        int cellW = 25;
+        int cellH = 25;
+        int columns = 6;
+        int gridStartX = centerX - ((columns * cellW) / 2);
+        int gridStartY = bookY + 133;
 
-        guiGraphics.pose().pushMatrix();
-        guiGraphics.pose().translate(0, -detailsScroll);
+        List<ItemStack> drops = getPlaceholderDropsForMob(selectedEntityId); // Tymczasowa lista dropów
+        if (!isFullyCollected) drops.clear(); // Ukrywamy drop, jeśli mob nieodkryty
 
-        int currentY = listStartY;
+        for (int i = 0; i < 18; i++) {
+            int slotX = gridStartX + ((i % columns) * cellW);
+            int slotY = gridStartY + ((i / columns) * cellH);
+            int bgX = slotX + 3;
+            int bgY = slotY + 3;
 
-        Component infoTitle = Component.translatable("gui.r3ct_bestiary.details.general_info").withStyle(ChatFormatting.BOLD, ChatFormatting.DARK_GRAY);
-        guiGraphics.text(this.font, infoTitle, textX, currentY, 0xFFFFFFFF, false); currentY += 12;
+            // Tło slota (ten sam styl co przy ikonach mobów)
+            guiGraphics.fill(bgX, bgY, bgX + 18, bgY + 18, 0x1A3F220B);
+            guiGraphics.fill(bgX, bgY, bgX + 18, bgY + 1, 0x2A3F220B);
+            guiGraphics.fill(bgX, bgY, bgX + 1, bgY + 18, 0x2A3F220B);
 
-        if (isFullyCollected && dummy != null) {
-            String typeKey = "gui.r3ct_bestiary.family.default";
-            var holder = type.builtInRegistryHolder();
-            if (holder.is(net.minecraft.tags.EntityTypeTags.UNDEAD)) typeKey = "gui.r3ct_bestiary.family.undead";
-            else if (holder.is(net.minecraft.tags.EntityTypeTags.ARTHROPOD)) typeKey = "gui.r3ct_bestiary.family.arthropod";
-            else if (holder.is(net.minecraft.tags.EntityTypeTags.AQUATIC)) typeKey = "gui.r3ct_bestiary.family.aquatic";
-            else if (holder.is(net.minecraft.tags.EntityTypeTags.ILLAGER)) typeKey = "gui.r3ct_bestiary.family.illager";
-            else if (holder.is(net.minecraft.tags.EntityTypeTags.SKELETONS)) typeKey = "gui.r3ct_bestiary.family.skeleton";
-            else if (type.getCategory() == net.minecraft.world.entity.MobCategory.MONSTER) typeKey = "gui.r3ct_bestiary.family.monster";
-            else if (type.getCategory() == net.minecraft.world.entity.MobCategory.CREATURE) typeKey = "gui.r3ct_bestiary.family.creature";
+            if (i < drops.size()) {
+                ItemStack drop = drops.get(i);
+                guiGraphics.item(drop, bgX + 1, bgY + 1);
 
-            Component familyComp = Component.translatable("gui.r3ct_bestiary.details.family").withStyle(ChatFormatting.GRAY)
-                    .append(Component.translatable(typeKey).withStyle(ChatFormatting.BLACK));
-            guiGraphics.text(this.font, familyComp, textX, currentY, 0xFFFFFFFF, false);
-        } else {
-            Component unknownFamily = Component.translatable("gui.r3ct_bestiary.details.family").withStyle(ChatFormatting.GRAY)
-                    .append(Component.literal("?").withStyle(ChatFormatting.GOLD));
-            guiGraphics.text(this.font, unknownFamily, textX, currentY, 0xFFFFFFFF, false);
-        }
-        currentY += 16;
-
-        Component bodyTitle = Component.translatable("gui.r3ct_bestiary.details.body_structure").withStyle(ChatFormatting.BOLD, ChatFormatting.DARK_GRAY);
-        guiGraphics.text(this.font, bodyTitle, textX, currentY, 0xFFFFFFFF, false); currentY += 12;
-
-        if (isFullyCollected && dummy != null) {
-            int hp = Math.round(dummy.getMaxHealth());
-            int armor = dummy.getArmorValue();
-            String size = String.format(java.util.Locale.US, "%.1fm x %.1fm", dummy.getBbWidth(), dummy.getBbHeight());
-
-            Component hpComp = Component.translatable("gui.r3ct_bestiary.details.health").withStyle(ChatFormatting.GRAY)
-                    .append(Component.literal(hp + " ❤").withStyle(ChatFormatting.RED));
-            guiGraphics.text(this.font, hpComp, textX, currentY, 0xFFFFFFFF, false); currentY += 10;
-
-            Component armorComp = Component.translatable("gui.r3ct_bestiary.details.armor").withStyle(ChatFormatting.GRAY)
-                    .append(Component.literal(armor + " 🛡").withStyle(ChatFormatting.BLUE));
-            guiGraphics.text(this.font, armorComp, textX, currentY, 0xFFFFFFFF, false); currentY += 10;
-
-            Component sizeComp = Component.translatable("gui.r3ct_bestiary.details.dimensions").withStyle(ChatFormatting.GRAY)
-                    .append(Component.literal(size).withStyle(ChatFormatting.BLACK));
-            guiGraphics.text(this.font, sizeComp, textX, currentY, 0xFFFFFFFF, false);
-        } else {
-            Component hpUnk = Component.translatable("gui.r3ct_bestiary.details.health").withStyle(ChatFormatting.GRAY).append(Component.literal("?").withStyle(ChatFormatting.GOLD));
-            Component armorUnk = Component.translatable("gui.r3ct_bestiary.details.armor").withStyle(ChatFormatting.GRAY).append(Component.literal("?").withStyle(ChatFormatting.GOLD));
-            Component dimUnk = Component.translatable("gui.r3ct_bestiary.details.dimensions").withStyle(ChatFormatting.GRAY).append(Component.literal("?").withStyle(ChatFormatting.GOLD));
-
-            guiGraphics.text(this.font, hpUnk, textX, currentY, 0xFFFFFFFF, false); currentY += 10;
-            guiGraphics.text(this.font, armorUnk, textX, currentY, 0xFFFFFFFF, false); currentY += 10;
-            guiGraphics.text(this.font, dimUnk, textX, currentY, 0xFFFFFFFF, false);
-        }
-        currentY += 16;
-
-        Component habitsTitle = Component.translatable("gui.r3ct_bestiary.details.habits_and_attack").withStyle(net.minecraft.ChatFormatting.BOLD, net.minecraft.ChatFormatting.DARK_GRAY);
-        guiGraphics.text(this.font, habitsTitle, textX, currentY, 0xFFFFFFFF, false); currentY += 12;
-
-        if (isFullyCollected && dummy != null) {
-            Component dmgVal = Component.translatable("gui.r3ct_bestiary.details.none");
-
-            var dmgAttr = dummy.getAttribute(net.minecraft.world.entity.ai.attributes.Attributes.ATTACK_DAMAGE);
-            double rawDamage = (dmgAttr != null) ? dmgAttr.getValue() : 0.0;
-
-            var holder = type.builtInRegistryHolder();
-
-            ItemStack mainHand = dummy.getMainHandItem();
-            ItemStack offHand = dummy.getOffhandItem();
-            boolean hasRangedWeaponMain = mainHand.getItem() instanceof net.minecraft.world.item.ProjectileWeaponItem || mainHand.is(Items.TRIDENT);
-            boolean hasRangedWeaponOff = offHand.getItem() instanceof net.minecraft.world.item.ProjectileWeaponItem || offHand.is(Items.TRIDENT);
-
-            if (holder.is(com.r3ct.bestiary.logic.ModTags.ATTACK_EXPLOSIVE)) {
-                dmgVal = Component.translatable("gui.r3ct_bestiary.details.explosion");
-
-            } else if (holder.is(com.r3ct.bestiary.logic.ModTags.ATTACK_SONIC)) {
-                dmgVal = Component.literal(Math.round(rawDamage) + " ⚔").append(Component.translatable("gui.r3ct_bestiary.details.sonic_boom"));
-
-            } else if (holder.is(com.r3ct.bestiary.logic.ModTags.ATTACK_MAGIC) || dummy instanceof net.minecraft.world.entity.monster.illager.SpellcasterIllager) {
-                dmgVal = Component.translatable("gui.r3ct_bestiary.details.magic");
-
-            } else if (hasRangedWeaponMain) {
-                dmgVal = Component.literal("🏹 ").append(mainHand.getHoverName());
-
-            } else if (hasRangedWeaponOff) {
-                dmgVal = Component.literal("🏹 ").append(offHand.getHoverName());
-
-            } else if (dummy instanceof net.minecraft.world.entity.monster.RangedAttackMob) {
-                dmgVal = Component.translatable("gui.r3ct_bestiary.details.ranged");
-
-            } else if (rawDamage > 0) {
-                dmgVal = Component.literal(Math.round(rawDamage) + " ⚔");
+                if (scaledMouseX >= slotX && scaledMouseX < slotX + cellW && scaledMouseY >= slotY && scaledMouseY < slotY + cellH) {
+                    guiGraphics.setTooltipForNextFrame(this.font, drop.getHoverName(), rawMouseX, rawMouseY);
+                }
             }
-
-            Component rangeVal = Component.translatable("gui.r3ct_bestiary.details.none");
-            var rangeAttr = dummy.getAttribute(net.minecraft.world.entity.ai.attributes.Attributes.FOLLOW_RANGE);
-            if (rangeAttr != null) {
-                rangeVal = Component.literal(Math.round(rangeAttr.getValue()) + " ").append(Component.translatable("gui.r3ct_bestiary.details.blocks"));
-            }
-
-            Component speedVal = Component.translatable("gui.r3ct_bestiary.details.none");
-            var speedAttr = dummy.getAttribute(net.minecraft.world.entity.ai.attributes.Attributes.MOVEMENT_SPEED);
-            if (speedAttr != null) {
-                speedVal = Component.translatable("gui.r3ct_bestiary.details.blocks_per_sec", String.format(java.util.Locale.US, "%.1f", speedAttr.getValue() * 10.0));
-            }
-
-            Component dmgComp = Component.translatable("gui.r3ct_bestiary.details.damage").withStyle(net.minecraft.ChatFormatting.GRAY).append(dmgVal.copy().withStyle(net.minecraft.ChatFormatting.RED));
-            guiGraphics.text(this.font, dmgComp, textX, currentY, 0xFFFFFFFF, false); currentY += 10;
-
-            Component rangeComp = Component.translatable("gui.r3ct_bestiary.details.vision").withStyle(net.minecraft.ChatFormatting.GRAY).append(rangeVal.copy().withStyle(net.minecraft.ChatFormatting.DARK_AQUA));
-            guiGraphics.text(this.font, rangeComp, textX, currentY, 0xFFFFFFFF, false); currentY += 10;
-
-            Component speedComp = Component.translatable("gui.r3ct_bestiary.details.speed").withStyle(net.minecraft.ChatFormatting.GRAY).append(speedVal.copy().withStyle(net.minecraft.ChatFormatting.BLACK));
-            guiGraphics.text(this.font, speedComp, textX, currentY, 0xFFFFFFFF, false);
-        } else {
-            Component dmgUnk = Component.translatable("gui.r3ct_bestiary.details.damage").withStyle(net.minecraft.ChatFormatting.GRAY).append(Component.literal("?").withStyle(net.minecraft.ChatFormatting.GOLD));
-            Component rangeUnk = Component.translatable("gui.r3ct_bestiary.details.vision").withStyle(net.minecraft.ChatFormatting.GRAY).append(Component.literal("?").withStyle(net.minecraft.ChatFormatting.GOLD));
-            Component speedUnk = Component.translatable("gui.r3ct_bestiary.details.speed").withStyle(net.minecraft.ChatFormatting.GRAY).append(Component.literal("?").withStyle(net.minecraft.ChatFormatting.GOLD));
-
-            guiGraphics.text(this.font, dmgUnk, textX, currentY, 0xFFFFFFFF, false); currentY += 10;
-            guiGraphics.text(this.font, rangeUnk, textX, currentY, 0xFFFFFFFF, false); currentY += 10;
-            guiGraphics.text(this.font, speedUnk, textX, currentY, 0xFFFFFFFF, false);
-        }
-        currentY += 16;
-
-        Component resistTitle = Component.translatable("gui.r3ct_bestiary.details.resistances").withStyle(ChatFormatting.BOLD, ChatFormatting.DARK_GRAY);
-        guiGraphics.text(this.font, resistTitle, textX, currentY, 0xFFFFFFFF, false); currentY += 12;
-
-        if (isFullyCollected && dummy != null) {
-            Component fireVal = dummy.fireImmune() ? Component.translatable("gui.r3ct_bestiary.details.yes").withStyle(ChatFormatting.DARK_GREEN) : Component.translatable("gui.r3ct_bestiary.details.no").withStyle(ChatFormatting.RED);
-
-            String kbStr = "0%";
-            var kbAttr = dummy.getAttribute(net.minecraft.world.entity.ai.attributes.Attributes.KNOCKBACK_RESISTANCE);
-            if (kbAttr != null) kbStr = ((int) Math.round(kbAttr.getValue() * 100)) + "%";
-
-            Component fireComp = Component.translatable("gui.r3ct_bestiary.details.fire").withStyle(ChatFormatting.GRAY).append(fireVal);
-            guiGraphics.text(this.font, fireComp, textX, currentY, 0xFFFFFFFF, false); currentY += 10;
-
-            Component kbComp = Component.translatable("gui.r3ct_bestiary.details.knockback").withStyle(ChatFormatting.GRAY).append(Component.literal(kbStr).withStyle(ChatFormatting.DARK_PURPLE));
-            guiGraphics.text(this.font, kbComp, textX, currentY, 0xFFFFFFFF, false);
-        } else {
-            Component fireUnk = Component.translatable("gui.r3ct_bestiary.details.fire").withStyle(ChatFormatting.GRAY).append(Component.literal("?").withStyle(ChatFormatting.GOLD));
-            Component kbUnk = Component.translatable("gui.r3ct_bestiary.details.knockback").withStyle(ChatFormatting.GRAY).append(Component.literal("?").withStyle(ChatFormatting.GOLD));
-
-            guiGraphics.text(this.font, fireUnk, textX, currentY, 0xFFFFFFFF, false); currentY += 10;
-            guiGraphics.text(this.font, kbUnk, textX, currentY, 0xFFFFFFFF, false);
         }
 
-        currentY += 10;
+        // 5. DODATKOWE 3 SLOTY NA DOLE
+        int bottomColumns = 3;
+        int bottomStartX = centerX - ((bottomColumns * cellW) / 2);
+        int bottomStartY = gridStartY + (3 * cellH) + 5; // Lekki odstęp od głównego ekwipunku
 
-        guiGraphics.pose().popMatrix();
-        guiGraphics.disableScissor();
+        for (int i = 0; i < bottomColumns; i++) {
+            int slotX = bottomStartX + (i * cellW);
+            int slotY = bottomStartY;
+            int bgX = slotX + 3;
+            int bgY = slotY + 3;
 
-        maxDetailsScroll = Math.max(0, (currentY - listStartY) - listHeight);
+            guiGraphics.fill(bgX, bgY, bgX + 18, bgY + 18, 0x1A3F220B);
+            guiGraphics.fill(bgX, bgY, bgX + 18, bgY + 1, 0x2A3F220B);
+            guiGraphics.fill(bgX, bgY, bgX + 1, bgY + 18, 0x2A3F220B);
+
+            // To miejsce czeka na Twoje polecenia! :)
+        }
+
+        // Zabezpieczenie przed błędem ze starym systemem przewijania
+        maxDetailsScroll = 0;
+    }
+
+    private List<ItemStack> getPlaceholderDropsForMob(String entityId) {
+        List<ItemStack> list = new ArrayList<>();
+        if (entityId.equals("minecraft:zombie")) {
+            list.add(new ItemStack(Items.ROTTEN_FLESH));
+            list.add(new ItemStack(Items.IRON_INGOT));
+            list.add(new ItemStack(Items.CARROT));
+            list.add(new ItemStack(Items.POTATO));
+        } else if (entityId.equals("minecraft:skeleton")) {
+            list.add(new ItemStack(Items.BONE));
+            list.add(new ItemStack(Items.ARROW));
+            list.add(new ItemStack(Items.BOW));
+        } else if (entityId.equals("minecraft:cow")) {
+            list.add(new ItemStack(Items.BEEF));
+            list.add(new ItemStack(Items.LEATHER));
+        } else {
+            // Domyślnie ładujemy np. 4 randomowe przedmioty tylko po to, by sprawdzić jak układa się GUI
+            list.add(new ItemStack(Items.BONE));
+        }
+        return list;
     }
 
     private void updateScrollbar(double mouseY) {
@@ -888,19 +752,12 @@ public class BestiaryScreen extends Screen {
             }
         } else if (activeSpecialTab == SpecialTab.NONE && !cachedCategories.isEmpty()) {
             int trackY = bookStartY + 47;
-            int trackH = 166;
+            int trackH = 171;
             EntityTypeScanner.CategoryData cat = cachedCategories.get(selectedTabIndex);
-            int maxScroll = Math.max(0, (int) Math.ceil(cat.entityIds.size() / 5.0) - 5);
+            int maxScroll = Math.max(0, (int) Math.ceil(cat.entityIds.size() / 6.0) - 7);
             if (maxScroll > 0) {
                 float fraction = Mth.clamp((float)(mouseY - trackY) / trackH, 0.0f, 1.0f);
                 currentRowScroll = Math.round(fraction * maxScroll);
-            }
-        } else if (activeSpecialTab == SpecialTab.DETAILS) {
-            int trackY = bookStartY + 135;
-            int trackH = 80;
-            if (maxDetailsScroll > 0) {
-                float fraction = Mth.clamp((float)(mouseY - trackY) / trackH, 0.0f, 1.0f);
-                detailsScroll = Math.round(fraction * maxDetailsScroll);
             }
         }
     }
@@ -981,16 +838,16 @@ public class BestiaryScreen extends Screen {
             }
         } else if (activeSpecialTab == SpecialTab.NONE) {
             int trackX = bookStartX + 199;
-            if (mouseX >= trackX - 2 && mouseX <= trackX + 6 && mouseY >= bookStartY + 47 && mouseY <= bookStartY + 47 + 166) {
+            if (mouseX >= trackX - 2 && mouseX <= trackX + 6 && mouseY >= bookStartY + 47 && mouseY <= bookStartY + 47 + 171) {
                 isScrolling = true; updateScrollbar(mouseY); return true;
             }
 
             EntityTypeScanner.CategoryData activeCat = cachedCategories.get(selectedTabIndex);
             List<String> items = activeCat.entityIds;
-            int columns = 5;
-            int visibleRows = 5;
-            int cellW = 30;
-            int cellH = 34;
+            int columns = 6;
+            int visibleRows = 7;
+            int cellW = 25;
+            int cellH = 25;
             int gridStartX = bookStartX + 49;
             int gridStartY = bookStartY + 46;
 
@@ -1055,15 +912,9 @@ public class BestiaryScreen extends Screen {
             return true;
         } else if (activeSpecialTab == SpecialTab.NONE) {
             EntityTypeScanner.CategoryData cat = cachedCategories.get(selectedTabIndex);
-            int maxScroll = Math.max(0, (int) Math.ceil(cat.entityIds.size() / 5.0) - 5);
+            int maxScroll = Math.max(0, (int) Math.ceil(cat.entityIds.size() / 6.0) - 7);
             if (scrollY > 0 && currentRowScroll > 0) currentRowScroll--;
             else if (scrollY < 0 && currentRowScroll < maxScroll) currentRowScroll++;
-        } else if (activeSpecialTab == SpecialTab.DETAILS) {
-            if (scrollY > 0 && detailsScroll > 0) detailsScroll -= 15;
-            else if (scrollY < 0 && detailsScroll < maxDetailsScroll) detailsScroll += 15;
-
-            detailsScroll = Mth.clamp(detailsScroll, 0, maxDetailsScroll);
-            return true;
         }
 
         return true;

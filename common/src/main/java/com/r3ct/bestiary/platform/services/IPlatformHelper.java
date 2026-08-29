@@ -8,7 +8,7 @@ import net.minecraft.world.level.block.entity.BlockEntityType;
 import net.minecraft.world.level.block.state.BlockState;
 
 import java.util.List;
-import java.util.Map;
+import java.util.Set;
 import java.util.function.BiFunction;
 
 public interface IPlatformHelper {
@@ -45,7 +45,7 @@ public interface IPlatformHelper {
         return isDevelopmentEnvironment() ? "development" : "production";
     }
 
-    void sendSyncDataPacketToClient(ServerPlayer player, Map<String, List<String>> unlockedActions, List<String> rewardedCategories);
+    void sendSyncDataPacketToClient(ServerPlayer player, Set<String> unlockedMobs, List<String> rewardedCategories);
 
     void sendRequestLeaderboardPacketToServer();
 

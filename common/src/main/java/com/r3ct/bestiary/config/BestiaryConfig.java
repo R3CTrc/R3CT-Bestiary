@@ -21,8 +21,6 @@ public class BestiaryConfig {
     public static Map<String, String> modCategoryOverrides = new HashMap<>();
     public static Map<String, String> mobCategoryOverrides = new HashMap<>();
 
-    public static Map<String, List<String>> customActionOverrides = new HashMap<>();
-
     public static float catalogScale = 1.0f;
 
     public static int xpPerAction = 10;
@@ -103,8 +101,6 @@ public class BestiaryConfig {
                     mobCategoryOverrides.put("minecraft:warden", "bosses");
                     mobCategoryOverrides.put("minecraft:elder_guardian", "bosses");
                 }
-
-                if (data.customActionOverrides != null) customActionOverrides = data.customActionOverrides;
             }
         } catch (Exception e) { System.err.println("[R3CT-Bestiary] Error loading mobs config!"); }
 
@@ -162,7 +158,6 @@ public class BestiaryConfig {
         Set<String> blacklistedMobs = BestiaryConfig.blacklistedMobs;
         Map<String, String> modCategoryOverrides = BestiaryConfig.modCategoryOverrides;
         Map<String, String> mobCategoryOverrides = BestiaryConfig.mobCategoryOverrides;
-        Map<String, List<String>> customActionOverrides = BestiaryConfig.customActionOverrides;
     }
 
     private static class ClientData {
@@ -229,7 +224,6 @@ public class BestiaryConfig {
                 if (mobsData.blacklistedMobs != null) blacklistedMobs = mobsData.blacklistedMobs;
                 if (mobsData.modCategoryOverrides != null) modCategoryOverrides = mobsData.modCategoryOverrides;
                 if (mobsData.mobCategoryOverrides != null) mobCategoryOverrides = mobsData.mobCategoryOverrides;
-                if (mobsData.customActionOverrides != null) customActionOverrides = mobsData.customActionOverrides;
             }
 
             RewardsData rewardsData = GSON.fromJson(rewardsJson, RewardsData.class);

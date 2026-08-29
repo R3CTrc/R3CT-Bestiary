@@ -31,10 +31,7 @@ public class BestiaryClientFabric implements ClientModInitializer {
                 com.r3ct.bestiary.network.SyncDataPayload.TYPE,
                 (payload, context) -> {
                     context.client().execute(() -> {
-                        ClientPlayerData.unlockedActions.clear();
-                        payload.unlockedActions().forEach((id, list) -> {
-                            ClientPlayerData.unlockedActions.put(id, new java.util.HashSet<>(list));
-                        });
+                        ClientPlayerData.unlockedMobs = new java.util.HashSet<>(payload.unlockedMobs());
                         ClientPlayerData.rewardedCategories = new java.util.HashSet<>(payload.rewardedCategories());
                     });
                 }
