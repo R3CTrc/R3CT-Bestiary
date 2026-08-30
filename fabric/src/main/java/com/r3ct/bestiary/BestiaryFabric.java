@@ -47,7 +47,6 @@ public class BestiaryFabric implements ModInitializer {
         PayloadTypeRegistry.clientboundPlay().register(SyncDataPayload.TYPE, SyncDataPayload.CODEC);
         PayloadTypeRegistry.serverboundPlay().register(com.r3ct.bestiary.network.RequestLeaderboardPayload.TYPE, com.r3ct.bestiary.network.RequestLeaderboardPayload.CODEC);
         PayloadTypeRegistry.clientboundPlay().register(com.r3ct.bestiary.network.LeaderboardDataPayload.TYPE, com.r3ct.bestiary.network.LeaderboardDataPayload.CODEC);
-        PayloadTypeRegistry.clientboundPlay().register(com.r3ct.bestiary.network.MobStatsSyncPayload.TYPE, com.r3ct.bestiary.network.MobStatsSyncPayload.STREAM_CODEC);
         PayloadTypeRegistry.clientboundPlay().register(com.r3ct.bestiary.network.ConfigSyncPayload.TYPE, com.r3ct.bestiary.network.ConfigSyncPayload.CODEC);
         PayloadTypeRegistry.serverboundPlay().register(com.r3ct.bestiary.network.SetTrophyEntityPayload.TYPE, com.r3ct.bestiary.network.SetTrophyEntityPayload.CODEC);
         PayloadTypeRegistry.serverboundPlay().register(com.r3ct.bestiary.network.DebugCompleteCategoryPayload.TYPE, com.r3ct.bestiary.network.DebugCompleteCategoryPayload.CODEC);
@@ -57,8 +56,6 @@ public class BestiaryFabric implements ModInitializer {
 
             com.r3ct.bestiary.platform.Services.PLATFORM.sendSyncDataPacketToClient(handler.player, new java.util.HashSet<>(data.unlockedMobs), new java.util.ArrayList<>(data.rewardedCategories));
 
-            var statsMap = com.r3ct.bestiary.scanner.ServerMobScanner.getServerMobStats(handler.player.level());
-            ServerPlayNetworking.send(handler.player, new com.r3ct.bestiary.network.MobStatsSyncPayload(statsMap));
             String mobsJson = BestiaryConfig.getMobsConfigAsString();
             String rewardsJson = BestiaryConfig.getRewardsConfigAsString();
             ServerPlayNetworking.send(handler.player, new com.r3ct.bestiary.network.ConfigSyncPayload(mobsJson, rewardsJson));

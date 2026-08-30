@@ -8,8 +8,9 @@
         "${mod_author}"
     ],
     "contact": {
-        "homepage": "https://fabricmc.net/",
-        "sources": "https://github.com/FabricMC/fabric-example-mod"
+        "homepage": "https://modrinth.com/project/r3ct-collection",
+        "sources": "https://github.com/R3CTrc/R3CT-Collection",
+        "issues": "https://github.com/R3CTrc/R3CT-Collection/issues"
     },
     "license": "${license}",
     "icon": "assets/r3ct_bestiary/icon.png",
@@ -23,6 +24,9 @@
         ],
         "modmenu": [
             "com.r3ct.bestiary.compat.ModMenuIntegration"
+        ],
+        "jei_mod_plugin": [
+            "com.r3ct.bestiary.compat.JeiIntegrationFabric"
         ]
     },
     "mixins": [
@@ -36,7 +40,8 @@
         "java": ">=${java_version}"
     },
     "suggests": {
-        "another-mod": "*"
+        "jei": ">=${jei_version}",
+        "modmenu": ">=${modmenu_version}"
     }
 }
   

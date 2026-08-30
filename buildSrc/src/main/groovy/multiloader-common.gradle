@@ -4,7 +4,7 @@ plugins {
 }
 
 base {
-    archivesName = "${mod_id}-${project.name}-${minecraft_version}"
+    archivesName = "${archives_base_name}-${project.name}-${minecraft_version}"
 }
 
 java {
@@ -71,7 +71,9 @@ processResources {
             'neoforge_version'             : neoforge_version,
             'neoforge_loader_version_range': neoforge_loader_version_range,
             'credits'                      : credits,
-            'java_version'                 : java_version
+            'java_version'                 : java_version,
+            'modmenu_version'              : modmenu_version,
+            'jei_version'                  : jei_version
     ]
 
     var jsonExpandProps = expandProps.collectEntries {

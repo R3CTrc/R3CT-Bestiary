@@ -41,17 +41,15 @@ public class BestiaryScreen extends Screen {
     private boolean isScrolling = false;
 
     private final List<EntityTypeScanner.CategoryData> cachedCategories = new ArrayList<>();
-    private final java.util.Map<String, net.minecraft.world.entity.LivingEntity> dummyCache = new java.util.HashMap<>();
 
-    private enum SpecialTab { NONE, HOME, INFO, LEADERBOARD, DETAILS }
+    private enum SpecialTab { NONE, HOME, INFO, LEADERBOARD }
     private SpecialTab activeSpecialTab = SpecialTab.HOME;
-    private String selectedEntityId = null;
 
     public BestiaryScreen() {
         super(Component.translatable("gui.r3ct_bestiary.catalog.title"));
     }
 
-    private float calculateEffectiveScale() {
+    public float calculateEffectiveScale() {
         float configScale = BestiaryConfig.catalogScale;
         float maxPossibleScale = Math.min((float) this.width / (RENDER_SIZE + 60), (float) this.height / RENDER_SIZE);
         return Math.min(configScale, maxPossibleScale);
@@ -117,43 +115,6 @@ public class BestiaryScreen extends Screen {
         return new ItemStack(Items.SPAWNER);
     }
 
-    private net.minecraft.world.entity.LivingEntity getOrCreateDummy(String entityId) {
-        if (dummyCache.containsKey(entityId)) return dummyCache.get(entityId);
-        if (this.minecraft == null || this.minecraft.level == null) return null;
-
-        EntityType<?> type = net.minecraft.core.registries.BuiltInRegistries.ENTITY_TYPE.get(Identifier.parse(entityId)).map(net.minecraft.core.Holder::value).orElse(null);
-        if (type != null) {
-            try {
-                net.minecraft.world.entity.Entity entity = type.create(this.minecraft.level, net.minecraft.world.entity.EntitySpawnReason.COMMAND);
-                if (entity instanceof net.minecraft.world.entity.LivingEntity living) {
-
-                    if (living instanceof net.minecraft.world.entity.Mob mob) {
-                        mob.setNoAi(true);
-                    }
-                    if (living instanceof net.minecraft.world.entity.monster.piglin.AbstractPiglin piglin) {
-                        piglin.setImmuneToZombification(true);
-                    }
-                    if (living instanceof net.minecraft.world.entity.monster.hoglin.Hoglin hoglin) {
-                        hoglin.setImmuneToZombification(true);
-                    }
-
-                    com.r3ct.bestiary.network.MobBaseStats serverStats = ClientPlayerData.serverMobStats.get(entityId);
-                    if (serverStats != null) {
-                        living.setItemSlot(net.minecraft.world.entity.EquipmentSlot.MAINHAND, serverStats.mainHandItem());
-                        var hpAttr = living.getAttribute(net.minecraft.world.entity.ai.attributes.Attributes.MAX_HEALTH);
-                        if (hpAttr != null) hpAttr.setBaseValue(serverStats.maxHealth());
-                    }
-
-                    dummyCache.put(entityId, living);
-                    return living;
-                }
-            } catch (Exception ignored) {}
-        }
-
-        dummyCache.put(entityId, null);
-        return null;
-    }
-
     @Override
     public void extractRenderState(@NonNull GuiGraphicsExtractor guiGraphics, int mouseX, int mouseY, float partialTick) {
 
@@ -180,8 +141,6 @@ public class BestiaryScreen extends Screen {
 
         if (activeSpecialTab == SpecialTab.NONE && !cachedCategories.isEmpty()) {
             renderItemGrid(guiGraphics, bookStartX, bookStartY, scaledMouseX, scaledMouseY, mouseX, mouseY, deltaTime);
-        } else if (activeSpecialTab == SpecialTab.DETAILS && selectedEntityId != null) {
-            renderDetailsTab(guiGraphics, bookStartX, bookStartY, scaledMouseX, scaledMouseY, mouseX, mouseY);
         } else if (activeSpecialTab == SpecialTab.HOME) {
             renderHomeTab(guiGraphics, bookStartX, bookStartY, scaledMouseX, scaledMouseY, mouseX, mouseY, deltaTime);
         } else if (activeSpecialTab == SpecialTab.INFO) {
@@ -436,7 +395,7 @@ public class BestiaryScreen extends Screen {
             int currentY = tabStartY + (i * 30);
 
             boolean isHovered = scaledMouseX >= baseTabX && scaledMouseX <= baseTabX + tabW && scaledMouseY >= currentY && scaledMouseY <= currentY + tabH;
-            boolean isSelected = ((activeSpecialTab == SpecialTab.NONE || activeSpecialTab == SpecialTab.DETAILS) && actualIndex == selectedTabIndex);
+            boolean isSelected = (activeSpecialTab == SpecialTab.NONE && actualIndex == selectedTabIndex);
 
             int finalX = (isHovered || isSelected) ? baseTabX - 2 : baseTabX;
             guiGraphics.blitSprite(RenderPipelines.GUI_TEXTURED, (isHovered || isSelected) ? TAB_SELECTED : TAB_UNSELECTED, finalX, currentY, tabW, tabH, 0xFFFFF2D4);
@@ -597,118 +556,11 @@ public class BestiaryScreen extends Screen {
                         .append(Component.translatable("action.r3ct_bestiary." + requiredAction).withStyle(ChatFormatting.GRAY));
                 itemTooltip.add(actionLine);
 
-                itemTooltip.add(Component.literal(" "));
-                itemTooltip.add(Component.translatable("gui.r3ct_bestiary.catalog.click_to_open").withStyle(ChatFormatting.DARK_GRAY));
-
                 guiGraphics.setComponentTooltipForNextFrame(this.font, itemTooltip, rawMouseX, rawMouseY);
             }
         }
     }
 
-    private void renderDetailsTab(GuiGraphicsExtractor guiGraphics, int bookX, int bookY, double scaledMouseX, double scaledMouseY, int rawMouseX, int rawMouseY) {
-        if (selectedEntityId == null) return;
-
-        EntityType<?> type = net.minecraft.core.registries.BuiltInRegistries.ENTITY_TYPE.get(Identifier.parse(selectedEntityId)).map(net.minecraft.core.Holder::value).orElse(null);
-        if (type == null) return;
-
-        net.minecraft.world.entity.LivingEntity dummy = getOrCreateDummy(selectedEntityId);
-        boolean isFullyCollected = ClientPlayerData.unlockedMobs.contains(selectedEntityId);
-
-        int centerX = bookX + (RENDER_SIZE / 2);
-
-        int boxX0 = centerX - 60;
-        int boxY0 = bookY + 20;
-        int boxX1 = centerX + 60;
-        int boxY1 = bookY + 100;
-
-        guiGraphics.fill(boxX0, boxY0, boxX1, boxY1, 0x11000000);
-
-        if (dummy != null && isFullyCollected) {
-            if (this.minecraft != null && this.minecraft.level != null) {
-                dummy.tickCount = (int) (this.minecraft.level.getGameTime() % 10000);
-            }
-            float maxDim = Math.max(dummy.getBbWidth(), dummy.getBbHeight());
-            if (maxDim <= 0.01F) maxDim = 1.0F;
-            int scale = (int) (45.0F * (float) Math.pow(maxDim, 0.4) / maxDim);
-
-            net.minecraft.client.gui.screens.inventory.InventoryScreen.extractEntityInInventoryFollowsMouse(
-                    guiGraphics, boxX0 + 2, boxY0 + 2, boxX1 - 2, boxY1 - 2,
-                    scale, 0.0625F, (float) scaledMouseX, (float) scaledMouseY, dummy
-            );
-        } else {
-            Component unknown = Component.literal("?").withStyle(ChatFormatting.GOLD);
-            guiGraphics.pose().pushMatrix();
-            guiGraphics.pose().translate((float)centerX, (float)(boxY0 + 40));
-            guiGraphics.pose().scale(4.0f, 4.0f);
-            guiGraphics.text(this.font, unknown, -this.font.width(unknown) / 2, -this.font.lineHeight / 2, 0xFFFFFFFF, false);
-            guiGraphics.pose().popMatrix();
-        }
-
-        Component title = type.getDescription();
-        guiGraphics.text(this.font, title, centerX - (this.font.width(title) / 2), bookY + 105, 0xFF000000, false);
-
-        String heartsText = "???";
-        if (isFullyCollected && ClientPlayerData.serverMobStats.containsKey(selectedEntityId)) {
-            int hearts = (int) Math.ceil(ClientPlayerData.serverMobStats.get(selectedEntityId).maxHealth() / 2.0);
-            heartsText = String.valueOf(hearts);
-        }
-
-        Component hpComp = Component.literal(heartsText + " ").withStyle(ChatFormatting.DARK_GRAY)
-                .append(Component.literal("❤").withStyle(ChatFormatting.RED));
-
-        guiGraphics.text(this.font, hpComp, centerX - (this.font.width(hpComp) / 2), bookY + 117, 0xFFFFFFFF, false);
-
-        int cellW = 25;
-        int cellH = 25;
-        int columns = 6;
-        int gridStartX = centerX - ((columns * cellW) / 2);
-        int gridStartY = bookY + 133;
-
-        List<ItemStack> drops = new ArrayList<>();
-        if (isFullyCollected && ClientPlayerData.serverMobStats.containsKey(selectedEntityId)) {
-            for (String itemId : ClientPlayerData.serverMobStats.get(selectedEntityId).drops()) {
-                net.minecraft.world.item.Item item = net.minecraft.core.registries.BuiltInRegistries.ITEM.get(Identifier.parse(itemId)).map(net.minecraft.core.Holder::value).orElse(net.minecraft.world.item.Items.AIR);
-                if (item != net.minecraft.world.item.Items.AIR) {
-                    drops.add(new ItemStack(item));
-                }
-            }
-        }
-
-        for (int i = 0; i < 18; i++) {
-            int slotX = gridStartX + ((i % columns) * cellW);
-            int slotY = gridStartY + ((i / columns) * cellH);
-            int bgX = slotX + 3;
-            int bgY = slotY + 3;
-
-            guiGraphics.fill(bgX, bgY, bgX + 18, bgY + 18, 0x1A3F220B);
-            guiGraphics.fill(bgX, bgY, bgX + 18, bgY + 1, 0x2A3F220B);
-            guiGraphics.fill(bgX, bgY, bgX + 1, bgY + 18, 0x2A3F220B);
-
-            if (i < drops.size()) {
-                ItemStack drop = drops.get(i);
-                guiGraphics.item(drop, bgX + 1, bgY + 1);
-
-                if (scaledMouseX >= slotX && scaledMouseX < slotX + cellW && scaledMouseY >= slotY && scaledMouseY < slotY + cellH) {
-                    guiGraphics.setTooltipForNextFrame(this.font, drop.getHoverName(), rawMouseX, rawMouseY);
-                }
-            }
-        }
-
-        int bottomColumns = 3;
-        int bottomStartX = centerX - ((bottomColumns * cellW) / 2);
-        int bottomStartY = gridStartY + (3 * cellH) + 5;
-
-        for (int i = 0; i < bottomColumns; i++) {
-            int slotX = bottomStartX + (i * cellW);
-            int slotY = bottomStartY;
-            int bgX = slotX + 3;
-            int bgY = slotY + 3;
-
-            guiGraphics.fill(bgX, bgY, bgX + 18, bgY + 18, 0x1A3F220B);
-            guiGraphics.fill(bgX, bgY, bgX + 18, bgY + 1, 0x2A3F220B);
-            guiGraphics.fill(bgX, bgY, bgX + 1, bgY + 18, 0x2A3F220B);
-        }
-    }
 
     private void updateScrollbar(double mouseY) {
         int bookStartY = ((this.height - RENDER_SIZE) / 2);
@@ -733,6 +585,41 @@ public class BestiaryScreen extends Screen {
         }
     }
 
+    public ItemStack getHoveredEgg(double mouseX, double mouseY) {
+        float scale = calculateEffectiveScale();
+        double scaledMouseX = (mouseX - this.width / 2.0) / scale + this.width / 2.0;
+        double scaledMouseY = (mouseY - this.height / 2.0) / scale + this.height / 2.0;
+
+        int bookStartX = (this.width - RENDER_SIZE) / 2;
+        int bookStartY = (this.height - RENDER_SIZE) / 2;
+
+        if (activeSpecialTab == SpecialTab.NONE && !cachedCategories.isEmpty()) {
+            int columns = 6;
+            int visibleRows = 7;
+            int cellW = 25;
+            int cellH = 25;
+            int gridStartX = bookStartX + 49;
+            int gridStartY = bookStartY + 46;
+
+            EntityTypeScanner.CategoryData activeCat = cachedCategories.get(selectedTabIndex);
+            List<String> items = activeCat.entityIds;
+
+            int startIndex = currentRowScroll * columns;
+            int endIndex = Math.min(startIndex + (columns * visibleRows), items.size());
+
+            for (int i = startIndex; i < endIndex; i++) {
+                int index = i - startIndex;
+                int slotX = gridStartX + (index % columns * cellW);
+                int slotY = gridStartY + (index / columns * cellH);
+
+                if (scaledMouseX >= slotX && scaledMouseX < slotX + cellW && scaledMouseY >= slotY && scaledMouseY < slotY + cellH) {
+                    return getSpawnEggForEntity(items.get(i));
+                }
+            }
+        }
+        return ItemStack.EMPTY;
+    }
+
     @Override
     public boolean mouseClicked(net.minecraft.client.input.MouseButtonEvent event, boolean doubleClick) {
         float scale = calculateEffectiveScale();
@@ -743,7 +630,7 @@ public class BestiaryScreen extends Screen {
         int bookStartY = (this.height - RENDER_SIZE) / 2;
 
         if (this.minecraft != null && this.minecraft.player != null && this.minecraft.player.isCreative()) {
-            if (activeSpecialTab == SpecialTab.NONE || activeSpecialTab == SpecialTab.DETAILS) {
+            if (activeSpecialTab == SpecialTab.NONE) {
 
                 int visibleIndex = selectedTabIndex - currentTabScroll;
 
@@ -812,31 +699,6 @@ public class BestiaryScreen extends Screen {
             if (mouseX >= trackX - 2 && mouseX <= trackX + 6 && mouseY >= bookStartY + 47 && mouseY <= bookStartY + 47 + 171) {
                 isScrolling = true; updateScrollbar(mouseY); return true;
             }
-
-            EntityTypeScanner.CategoryData activeCat = cachedCategories.get(selectedTabIndex);
-            List<String> items = activeCat.entityIds;
-            int columns = 6;
-            int visibleRows = 7;
-            int cellW = 25;
-            int cellH = 25;
-            int gridStartX = bookStartX + 49;
-            int gridStartY = bookStartY + 46;
-
-            int startIndex = currentRowScroll * columns;
-            int endIndex = Math.min(startIndex + (columns * visibleRows), items.size());
-
-            for (int i = startIndex; i < endIndex; i++) {
-                int index = i - startIndex;
-                int slotX = gridStartX + (index % columns * cellW);
-                int slotY = gridStartY + (index / columns * cellH);
-
-                if (mouseX >= slotX && mouseX < slotX + cellW && mouseY >= slotY && mouseY < slotY + cellH) {
-                    selectedEntityId = items.get(i);
-                    activeSpecialTab = SpecialTab.DETAILS;
-                    this.minecraft.getSoundManager().play(net.minecraft.client.resources.sounds.SimpleSoundInstance.forUI(net.minecraft.sounds.SoundEvents.UI_BUTTON_CLICK, 1.0F));
-                    return true;
-                }
-            }
         }
 
         return super.mouseClicked(event, doubleClick);
@@ -891,12 +753,7 @@ public class BestiaryScreen extends Screen {
 
     @Override
     public void onClose() {
-        if (activeSpecialTab == SpecialTab.DETAILS) {
-            activeSpecialTab = SpecialTab.NONE;
-            this.minecraft.getSoundManager().play(net.minecraft.client.resources.sounds.SimpleSoundInstance.forUI(net.minecraft.sounds.SoundEvents.UI_BUTTON_CLICK, 1.0F));
-        } else {
-            super.onClose();
-        }
+        super.onClose();
     }
 
     @Override
